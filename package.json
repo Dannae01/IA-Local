@@ -1,0 +1,16 @@
+{
+  "name": "nova",
+  "version": "0.1.0",
+  "description": "Asistente virtual local con IA",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "electron": "^44.1.1"
+  }
+}

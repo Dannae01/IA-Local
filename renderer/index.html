@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';"
+    >
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>NOVA</title>
+
+    <link rel="stylesheet" href="css/global.css">
+</head>
+
+<body>
+
+    <div id="nova-app">
+
+        <!-- Burbuja cerrada -->
+        <button class="bubble" id="bubble">
+            <span></span>
+        </button>
+
+
+        <!-- Ventana de chat -->
+        <div class="chat-window" id="chat-window">
+
+            <div class="chat-header">
+
+                <div class="nova-title">
+
+                    <span class="nova-icon"></span>
+
+                    <span>NOVA</span>
+
+                </div>
+
+                <button class="close-button" id="close-button">
+                    ×
+                </button>
+
+            </div>
+
+
+            <div class="chat-messages" id="chat-messages">
+
+                <div class="message nova-message">
+                    Hola 👋<br>
+                    Soy NOVA. ¿En qué puedo ayudarte?
+                </div>
+
+            </div>
+
+
+            <div class="chat-input-area">
+
+                <input
+                    type="text"
+                    id="chat-input"
+                    placeholder="Escribe un mensaje..."
+                    autocomplete="off"
+                >
+
+                <button id="send-button">
+                    ↑
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>

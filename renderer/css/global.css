@@ -1,0 +1,237 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+
+    overflow: hidden;
+
+    background: transparent;
+
+    font-family: Arial, sans-serif;
+}
+
+#nova-app {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* =========================
+   BURBUJA CERRADA
+========================= */
+
+.bubble {
+    width: 24px;
+    height: 24px;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 50%;
+
+    background: rgba(25, 25, 30, 0.92);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+
+    /* Sin sombra */
+    box-shadow: none;
+
+    /* Evita cualquier crecimiento */
+    transition: background 0.15s ease;
+}
+
+.bubble:hover {
+    /* Solo cambia ligeramente el fondo */
+    background: rgba(40, 40, 45, 0.98);
+}
+
+
+/* Punto blanco */
+
+.bubble span {
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+
+    background: white;
+
+    display: block;
+}
+
+
+/* =========================
+   VENTANA DE CHAT
+========================= */
+
+.chat-window {
+    width: 400px;
+    height: 600px;
+
+    display: none;
+    flex-direction: column;
+
+    background: rgba(25, 25, 30, 0.97);
+
+    border-radius: 20px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 15px 50px rgba(0, 0, 0, 0.35);
+}
+
+
+/* =========================
+   CABECERA
+========================= */
+
+.chat-header {
+    height: 60px;
+
+    padding: 0 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nova-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    color: white;
+
+    font-size: 18px;
+}
+
+
+/* Punto del encabezado */
+
+.nova-icon {
+    width: 9px;
+    height: 9px;
+
+    border-radius: 50%;
+
+    background: white;
+
+    display: block;
+}
+
+
+.close-button {
+    border: none;
+
+    background: transparent;
+
+    color: rgba(255, 255, 255, 0.7);
+
+    font-size: 26px;
+
+    cursor: pointer;
+}
+
+
+/* =========================
+   MENSAJES
+========================= */
+
+.chat-messages {
+    flex: 1;
+
+    padding: 20px;
+
+    overflow-y: auto;
+}
+
+.message {
+    max-width: 85%;
+
+    padding: 12px 15px;
+
+    border-radius: 14px;
+
+    color: white;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+}
+
+.nova-message {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+
+/* =========================
+   INPUT
+========================= */
+
+.chat-input-area {
+    padding: 12px;
+
+    display: flex;
+
+    gap: 8px;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-input-area input {
+    flex: 1;
+
+    min-width: 0;
+
+    padding: 12px 14px;
+
+    border: none;
+
+    border-radius: 12px;
+
+    outline: none;
+
+    background: rgba(255, 255, 255, 0.1);
+
+    color: white;
+
+    font-size: 14px;
+}
+
+.chat-input-area input::placeholder {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+
+#send-button {
+    width: 42px;
+    height: 42px;
+
+    border: none;
+
+    border-radius: 12px;
+
+    background: white;
+
+    color: #19191e;
+
+    font-size: 20px;
+
+    cursor: pointer;
+}
