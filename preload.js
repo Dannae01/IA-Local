@@ -12,6 +12,10 @@ contextBridge.exposeInMainWorld('nova', {
         ipcRenderer.send('nova-close');
     },
 
+    stop: () => {
+        ipcRenderer.send('nova-stop');
+    },
+
     sendMessage: (message) => {
         return ipcRenderer.invoke('nova-message', message);
     },

@@ -74,6 +74,11 @@ async function sendMessage() {
     messages.scrollTop = messages.scrollHeight;
 
 
+    // Cambiar botón a "Detener"
+    sendButton.textContent = "■";
+    sendButton.classList.add("stop-button");
+
+
     // Recibir streaming de NOVA
     window.nova.onStream((data) => {
 
@@ -90,9 +95,18 @@ async function sendMessage() {
 
         if (!result.success) {
 
-            novaMessage.textContent =
-                "No pude conectarme con Ollama.\n\n" +
-                result.error;
+            if (result.stopped) {
+
+                novaMessage.textContent +=
+                    "\n\n[Generación detenida]";
+
+            } else {
+
+                novaMessage.textContent =
+                    "No pude conectarme con Ollama.\n\n" +
+                    result.error;
+
+            }
 
         }
 
@@ -105,11 +119,29 @@ async function sendMessage() {
 
     }
 
+
+    // Restaurar botón
+    sendButton.textContent = "↑";
+    sendButton.classList.remove("stop-button");
+
+    messages.scrollTop = messages.scrollHeight;
 }
 
 /* Botón enviar */
 
-sendButton.addEventListener("click", sendMessage);
+sendButton.addEventListener("click", () => {
+
+    if (sendButton.classList.contains("stop-button")) {
+
+        window.nova.stop();
+
+        return;
+
+    }
+
+    sendMessage();
+
+});
 
 
 /* Enter para enviar */

@@ -4,6 +4,7 @@ const path = require('path');
 const novaCore = require('./src/core/app');
 
 let mainWindow;
+let currentAbortController = null;
 
 function getBubblePosition() {
     const display = screen.getPrimaryDisplay();
@@ -99,6 +100,8 @@ ipcMain.handle('nova-message', async (event, message) => {
 
         const model = 'qwen2.5:14b';
 
+        currentAbortController = new AbortController();
+
         const streamId = Date.now().toString();
 
         const response = await novaCore.processMessage(
@@ -111,8 +114,11 @@ ipcMain.handle('nova-message', async (event, message) => {
                     chunk: chunk
                 });
 
-            }
+            },
+            currentAbortController.signal
         );
+
+        currentAbortController = null;
 
         return {
             success: true,
@@ -122,12 +128,37 @@ ipcMain.handle('nova-message', async (event, message) => {
 
     } catch (error) {
 
+        currentAbortController = null;
+
+        if (error.name === 'AbortError') {
+
+            return {
+                success: false,
+                stopped: true
+            };
+
+        }
+
         console.error('Error de NOVA:', error);
 
         return {
             success: false,
             error: error.message
         };
+
+    }
+
+});
+
+ipcMain.on('nova-stop', () => {
+
+    if (currentAbortController) {
+
+        currentAbortController.abort();
+
+        currentAbortController = null;
+
+        console.log('Generación detenida.');
 
     }
 
