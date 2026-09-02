@@ -30,7 +30,7 @@ async function getModels() {
 }
 
 
-async function chat(model, messages, onChunk) {
+async function chat(model, messages, onChunk, signal) {
 
     const response = await fetch(`${OLLAMA_URL}/api/chat`, {
 
@@ -44,7 +44,9 @@ async function chat(model, messages, onChunk) {
             model,
             messages,
             stream: true
-        })
+        }),
+
+        signal
 
     });
 
