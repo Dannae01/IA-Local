@@ -30,7 +30,7 @@ async function getModels() {
 }
 
 
-async function chat(model, messages) {
+async function chat(model, messages, onChunk) {
 
     const response = await fetch(`${OLLAMA_URL}/api/chat`, {
 
@@ -43,7 +43,7 @@ async function chat(model, messages) {
         body: JSON.stringify({
             model,
             messages,
-            stream: false
+            stream: true
         })
 
     });
@@ -57,9 +57,46 @@ async function chat(model, messages) {
         );
     }
 
-    const data = await response.json();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
 
-    return data.message?.content || '';
+    let fullResponse = '';
+
+    while (true) {
+
+        const { value, done } = await reader.read();
+
+        if (done) {
+            break;
+        }
+
+        const chunk = decoder.decode(value, {
+            stream: true
+        });
+
+        const lines = chunk
+            .split('\n')
+            .filter(line => line.trim() !== '');
+
+        for (const line of lines) {
+
+            const data = JSON.parse(line);
+
+            const content = data.message?.content || '';
+
+            if (content) {
+
+                fullResponse += content;
+
+                if (onChunk) {
+                    onChunk(content);
+                }
+
+            }
+        }
+    }
+
+    return fullResponse;
 }
 
 

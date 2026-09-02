@@ -46,13 +46,10 @@ async function sendMessage() {
         return;
     }
 
-
     // Mostrar mensaje del usuario
-
     const userMessage = document.createElement("div");
 
     userMessage.classList.add("message");
-
     userMessage.textContent = text;
 
     messages.appendChild(userMessage);
@@ -62,8 +59,7 @@ async function sendMessage() {
     messages.scrollTop = messages.scrollHeight;
 
 
-    // Crear mensaje temporal de NOVA
-
+    // Crear mensaje de NOVA
     const novaMessage = document.createElement("div");
 
     novaMessage.classList.add(
@@ -71,23 +67,28 @@ async function sendMessage() {
         "nova-message"
     );
 
-    novaMessage.textContent = "Pensando...";
+    novaMessage.textContent = "";
 
     messages.appendChild(novaMessage);
 
     messages.scrollTop = messages.scrollHeight;
 
 
+    // Recibir streaming de NOVA
+    window.nova.onStream((data) => {
+
+        novaMessage.textContent += data.chunk;
+
+        messages.scrollTop = messages.scrollHeight;
+
+    });
+
+
     try {
 
         const result = await window.nova.sendMessage(text);
 
-
-        if (result.success) {
-
-            novaMessage.textContent = result.response;
-
-        } else {
+        if (!result.success) {
 
             novaMessage.textContent =
                 "No pude conectarme con Ollama.\n\n" +
@@ -104,10 +105,7 @@ async function sendMessage() {
 
     }
 
-
-    messages.scrollTop = messages.scrollHeight;
 }
-
 
 /* Botón enviar */
 

@@ -10,7 +10,7 @@ Responde directamente a lo que el usuario necesita.
 Actualmente estás funcionando de forma local mediante Ollama.
 `;
 
-async function processMessage(userMessage, model) {
+async function processMessage(userMessage, model, onChunk) {
 
     const messages = [
         {
@@ -23,13 +23,17 @@ async function processMessage(userMessage, model) {
         }
     ];
 
+
     const response = await ollama.chat(
         model,
-        messages
+        messages,
+        onChunk
     );
+
 
     return response;
 }
+
 
 module.exports = {
     processMessage
