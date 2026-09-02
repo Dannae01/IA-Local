@@ -14,6 +14,18 @@ contextBridge.exposeInMainWorld('nova', {
 
     sendMessage: (message) => {
         return ipcRenderer.invoke('nova-message', message);
+    },
+
+    onStream: (callback) => {
+
+        ipcRenderer.removeAllListeners('nova-stream');
+
+        ipcRenderer.on('nova-stream', (event, chunk) => {
+
+            callback(chunk);
+
+        });
+
     }
 
 });

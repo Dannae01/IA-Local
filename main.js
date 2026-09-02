@@ -99,14 +99,25 @@ ipcMain.handle('nova-message', async (event, message) => {
 
         const model = 'qwen2.5:14b';
 
+        const streamId = Date.now().toString();
+
         const response = await novaCore.processMessage(
             message,
-            model
+            model,
+            (chunk) => {
+
+                event.sender.send('nova-stream', {
+                    id: streamId,
+                    chunk: chunk
+                });
+
+            }
         );
 
         return {
             success: true,
-            response
+            response,
+            id: streamId
         };
 
     } catch (error) {
