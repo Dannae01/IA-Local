@@ -46,15 +46,12 @@ body {
 
     cursor: pointer;
 
-    /* Sin sombra */
     box-shadow: none;
 
-    /* Evita cualquier crecimiento */
     transition: background 0.15s ease;
 }
 
 .bubble:hover {
-    /* Solo cambia ligeramente el fondo */
     background: rgba(40, 40, 45, 0.98);
 }
 
@@ -78,6 +75,7 @@ body {
 ========================= */
 
 .chat-window {
+    position: relative;
     width: 400px;
     height: 600px;
 
@@ -109,6 +107,44 @@ body {
     justify-content: space-between;
 
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.new-chat-button {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.new-chat-button::before,
+.new-chat-button::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 2px;
+}
+
+.new-chat-button::after {
+    transform: rotate(90deg);
+}
+
+.new-chat-button:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .nova-title {
@@ -234,4 +270,317 @@ body {
     font-size: 20px;
 
     cursor: pointer;
+}
+
+.conversation-button {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.conversation-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.conversation-panel {
+    position: absolute;
+    top: 60px;
+    left: 0;
+    width: 280px;
+    height: calc(100% - 60px);
+    background: rgba(25, 25, 30, 0.98);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+
+    display: none;
+    flex-direction: column;
+}
+
+.conversation-panel-open {
+    display: flex;
+}
+
+.conversation-panel-header {
+    padding: 18px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.conversation-new-button {
+    margin: 0 12px 12px;
+    padding: 11px 12px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    text-align: left;
+    cursor: pointer;
+}
+
+.conversation-new-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.conversation-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 8px;
+    overflow-y: auto;
+}
+
+.conversation-item {
+    position: relative;
+    width: 100%;
+    min-height: 42px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    overflow: visible;
+}
+
+.conversation-title {
+    flex: 1;
+    min-width: 0;
+    height: 42px;
+    padding: 0 10px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.75);
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.conversation-title:hover {
+    color: white;
+}
+
+.conversation-delete-button {
+    width: 34px;
+    height: 34px;
+    margin-right: 4px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.conversation-delete-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.conversation-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+.conversation-rename-button {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.conversation-rename-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+/* =========================
+   DIÁLOGO RENOMBRAR
+========================= */
+
+.rename-dialog {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.rename-dialog-open {
+    display: flex;
+}
+
+.rename-dialog-box {
+    width: 300px;
+    padding: 18px;
+    border-radius: 14px;
+    background: rgba(35, 35, 40, 0.98);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+.rename-dialog-title {
+    margin-bottom: 14px;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+#rename-input {
+    width: 100%;
+    padding: 11px 12px;
+    border: none;
+    border-radius: 10px;
+    outline: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 14px;
+}
+
+#rename-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.rename-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.rename-dialog-actions button {
+    padding: 9px 13px;
+    border: none;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+}
+
+.rename-dialog-actions button:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+#rename-confirm-button {
+    background: white;
+    color: #19191e;
+}
+
+.conversation-menu {
+    position: absolute;
+    right: 8px;
+    top: 42px;
+    width: 150px;
+    padding: 5px;
+    border-radius: 10px;
+    background: rgba(35, 35, 40, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+
+    display: none;
+    flex-direction: column;
+
+    z-index: 100;
+}
+
+.conversation-menu-open {
+    display: flex;
+}
+
+.conversation-menu button {
+    width: 100%;
+    padding: 9px 10px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    text-align: left;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.conversation-menu button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+.delete-dialog {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 50;
+}
+
+.delete-dialog-open {
+    display: flex;
+}
+
+.delete-dialog-box {
+    width: 300px;
+    padding: 20px;
+    border-radius: 14px;
+    background: rgba(35, 35, 40, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+}
+
+.delete-dialog-title {
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.delete-dialog-text {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 13px;
+    line-height: 1.4;
+    margin-bottom: 18px;
+}
+
+.delete-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.delete-dialog-actions button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.delete-dialog-actions button:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: white;
+}
+
+#delete-confirm-button {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+#delete-confirm-button:hover {
+    background: rgba(255, 255, 255, 0.22);
 }

@@ -2,6 +2,10 @@ const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
 
 const novaCore = require('./src/core/app');
+const migrations = require('./src/database/migrations');
+const conversations = require('./src/database/repositories/conversations');
+const session = require('./src/database/repositories/session');
+const messages = require('./src/database/repositories/messages');
 
 let mainWindow;
 let currentAbortController = null;
@@ -100,6 +104,31 @@ ipcMain.handle('nova-message', async (event, message) => {
 
         const model = 'qwen2.5:14b';
 
+        let conversationId = session.getCurrentConversation();
+
+        if (!conversationId) {
+
+            conversationId = conversations.createConversation(
+                message.slice(0, 40)
+            );
+
+            session.setCurrentConversation(conversationId);
+
+            console.log(
+                'Nueva conversación creada:',
+                conversationId
+            );
+
+        }
+
+        messages.createMessage(
+            conversationId,
+            'user',
+            message
+        );
+
+        conversations.updateConversationTimestamp(conversationId);
+
         currentAbortController = new AbortController();
 
         const streamId = Date.now().toString();
@@ -115,8 +144,17 @@ ipcMain.handle('nova-message', async (event, message) => {
                 });
 
             },
-            currentAbortController.signal
+            currentAbortController.signal,
+            conversationId
         );
+
+        messages.createMessage(
+            conversationId,
+            'assistant',
+            response
+        );
+
+        conversations.updateConversationTimestamp(conversationId);
 
         currentAbortController = null;
 
@@ -150,6 +188,98 @@ ipcMain.handle('nova-message', async (event, message) => {
 
 });
 
+ipcMain.handle('nova-new-conversation', () => {
+
+    const conversationId =
+        conversations.createConversation(
+            'Nueva conversación'
+        );
+
+    session.setCurrentConversation(conversationId);
+
+    console.log(
+        'Nueva conversación creada:',
+        conversationId
+    );
+
+    return {
+        success: true,
+        conversationId
+    };
+});
+
+/* Obtener conversaciones */
+ipcMain.handle('nova-get-conversations', () => {
+
+    return conversations.getAllConversations();
+
+});
+
+/* Obtener mensajes de una conversación */
+ipcMain.handle('nova-get-messages', (event, conversationId) => {
+
+    return messages.getMessages(conversationId);
+
+});
+
+/* Seleccionar conversación actual */
+ipcMain.handle('nova-select-conversation', (event, conversationId) => {
+
+    session.setCurrentConversation(conversationId);
+
+    console.log(
+        'Conversación seleccionada:',
+        conversationId
+    );
+
+    return {
+        success: true
+    };
+
+});
+
+/* Eliminar conversación */
+ipcMain.handle('nova-delete-conversation', (event, conversationId) => {
+
+    conversations.deleteConversation(conversationId);
+
+    if (
+        session.getCurrentConversation() === conversationId
+    ) {
+        session.clearCurrentConversation();
+    }
+
+    console.log(
+        'Conversación eliminada:',
+        conversationId
+    );
+
+    return {
+        success: true
+    };
+
+});
+
+/* Renombrar conversación */
+ipcMain.handle('nova-rename-conversation', (event, conversationId, title) => {
+
+    conversations.renameConversation(
+        conversationId,
+        title
+    );
+
+    console.log(
+        'Conversación renombrada:',
+        conversationId,
+        title
+    );
+
+    return {
+        success: true
+    };
+
+});
+
 ipcMain.on('nova-stop', () => {
 
     if (currentAbortController) {
@@ -165,6 +295,8 @@ ipcMain.on('nova-stop', () => {
 });
 
 app.whenReady().then(() => {
+
+    migrations.initializeDatabase();
 
     createWindow();
 
