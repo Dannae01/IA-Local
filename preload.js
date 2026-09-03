@@ -57,6 +57,49 @@ contextBridge.exposeInMainWorld('nova', {
         return ipcRenderer.invoke('nova-message', message);
     },
 
+    getModels: () => {
+        return ipcRenderer.invoke('nova-get-models');
+    },
+
+    setModel: (model) => {
+        return ipcRenderer.invoke(
+            'nova-set-model',
+            model
+        );
+    },
+
+    getSelectedModel: () => {
+        return ipcRenderer.invoke(
+            'nova-get-selected-model'
+        );
+    },
+
+    getTemperature: () => {
+        return ipcRenderer.invoke(
+            'nova-get-temperature'
+        );
+    },
+
+    setTemperature: (value) => {
+        return ipcRenderer.invoke(
+            'nova-set-temperature',
+            value
+        );
+    },
+
+    getContextSize: () => {
+        return ipcRenderer.invoke(
+            'nova-get-context-size'
+        );
+    },
+
+    setContextSize: (value) => {
+        return ipcRenderer.invoke(
+            'nova-set-context-size',
+            value
+        );
+    },
+
     onStream: (callback) => {
 
         ipcRenderer.removeAllListeners('nova-stream');

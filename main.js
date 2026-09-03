@@ -2,10 +2,13 @@ const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
 
 const novaCore = require('./src/core/app');
+const ollama = require('./src/ai/ollama');
 const migrations = require('./src/database/migrations');
 const conversations = require('./src/database/repositories/conversations');
 const session = require('./src/database/repositories/session');
 const messages = require('./src/database/repositories/messages');
+const settings = require('./src/database/repositories/settings');
+
 
 let mainWindow;
 let currentAbortController = null;
@@ -102,7 +105,20 @@ ipcMain.handle('nova-message', async (event, message) => {
 
     try {
 
-        const model = 'qwen2.5:14b';
+        const model =
+            settings.getSetting('selected_model') ||
+            'qwen2.5:14b';
+
+        const temperature =
+            parseFloat(
+                settings.getSetting('temperature') || '0.7'
+            );
+
+        const contextSize =
+            parseInt(
+                settings.getSetting('context_size') || '8192',
+                10
+            );
 
         let conversationId = session.getCurrentConversation();
 
@@ -137,15 +153,15 @@ ipcMain.handle('nova-message', async (event, message) => {
             message,
             model,
             (chunk) => {
-
                 event.sender.send('nova-stream', {
                     id: streamId,
                     chunk: chunk
                 });
-
             },
             currentAbortController.signal,
-            conversationId
+            conversationId,
+            temperature,
+            contextSize
         );
 
         messages.createMessage(
@@ -213,6 +229,182 @@ ipcMain.handle('nova-get-conversations', () => {
 
     return conversations.getAllConversations();
 
+});
+
+/* Obtener modelos de Ollama */
+ipcMain.handle('nova-get-models', async () => {
+
+    try {
+
+        return await ollama.getModels();
+
+    } catch (error) {
+
+        console.error(
+            'ERROR AL OBTENER MODELOS:',
+            error
+        );
+
+        return [];
+
+    }
+
+});
+
+ipcMain.handle('nova-set-model', async (event, model) => {
+
+    try {
+
+        settings.setSetting(
+            'selected_model',
+            model
+        );
+
+        return true;
+
+    } catch (error) {
+
+        console.error(
+            'ERROR AL GUARDAR MODELO:',
+            error
+        );
+
+        return false;
+    }
+
+});
+
+
+ipcMain.handle('nova-get-selected-model', async () => {
+
+    try {
+
+        return (
+            settings.getSetting('selected_model') ||
+            'qwen2.5:14b'
+        );
+
+    } catch (error) {
+
+        console.error(
+            'ERROR AL OBTENER MODELO SELECCIONADO:',
+            error
+        );
+
+        return 'qwen2.5:14b';
+    }
+
+});
+
+ipcMain.handle('nova-set-temperature', async (event, value) => {
+
+    try {
+
+        const temperature = parseFloat(value);
+
+        console.log('GUARDANDO TEMPERATURA:', temperature);
+
+        if (isNaN(temperature)) {
+            return false;
+        }
+
+        settings.setSetting(
+            'temperature',
+            temperature.toString()
+        );
+
+        return true;
+
+    } catch (error) {
+
+        console.error(
+            'ERROR AL GUARDAR TEMPERATURA:',
+            error
+        );
+
+        return false;
+    }
+
+});
+
+
+ipcMain.handle('nova-get-temperature', async () => {
+
+    try {
+
+        const savedTemperature =
+            settings.getSetting('temperature');
+
+        console.log(
+            'TEMPERATURA GUARDADA EN SQLITE:',
+            savedTemperature
+        );
+
+        return savedTemperature || '0.7';
+
+    } catch (error) {
+
+        console.error(
+            'ERROR AL OBTENER TEMPERATURA:',
+            error
+        );
+
+        return '0.7';
+    }
+
+});
+
+ipcMain.handle('nova-set-context-size', async (event, value) => {
+    try {
+        const contextSize = parseInt(value, 10);
+
+        if (isNaN(contextSize)) {
+            return false;
+        }
+
+        settings.setSetting(
+            'context_size',
+            contextSize.toString()
+        );
+
+        console.log(
+            'TAMAÑO DE CONTEXTO GUARDADO:',
+            contextSize
+        );
+
+        return true;
+
+    } catch (error) {
+        console.error(
+            'ERROR AL GUARDAR TAMAÑO DE CONTEXTO:',
+            error
+        );
+
+        return false;
+    }
+});
+
+
+ipcMain.handle('nova-get-context-size', async () => {
+    try {
+        const savedContextSize =
+            settings.getSetting('context_size');
+
+        console.log(
+            'TAMAÑO DE CONTEXTO GUARDADO EN SQLITE:',
+            savedContextSize
+        );
+
+        return savedContextSize || '8192';
+
+    } catch (error) {
+        console.error(
+            'ERROR AL CARGAR TAMAÑO DE CONTEXTO:',
+            error
+        );
+
+        return '8192';
+    }
 });
 
 /* Obtener mensajes de una conversación */

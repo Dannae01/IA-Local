@@ -37,6 +37,12 @@ function initializeDatabase() {
 
         CREATE INDEX IF NOT EXISTS idx_messages_conversation
         ON messages(conversation_id);
+
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
+
     `);
 
     console.log('Tablas de NOVA inicializadas.');

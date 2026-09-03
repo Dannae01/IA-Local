@@ -17,7 +17,9 @@ async function processMessage(
     model,
     onChunk,
     signal,
-    conversationId
+    conversationId,
+    temperature,
+    contextSize
 ) {
 
     const history = conversationId
@@ -48,12 +50,18 @@ async function processMessage(
         messages
     );
 
+    console.log(
+        'CONTEXTO RECIBIDO EN APP:',
+        contextSize
+    );
 
     const response = await ollama.chat(
         model,
         messages,
         onChunk,
-        signal
+        signal,
+        temperature,
+        contextSize
     );
 
 

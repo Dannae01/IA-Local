@@ -584,3 +584,152 @@ body {
 #delete-confirm-button:hover {
     background: rgba(255, 255, 255, 0.22);
 }
+
+/* ============================= */
+/* PANEL DE CONFIGURACIÓN */
+/* ============================= */
+
+.settings-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    width: 360px;
+    padding: 24px;
+
+    background: #1c1d24;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+    z-index: 1000;
+
+    color: white;
+}
+
+.settings-panel.hidden {
+    display: none !important;
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 24px;
+}
+
+.settings-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.settings-header button {
+    border: none;
+    background: transparent;
+    color: white;
+
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-section label {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+#model-select {
+    width: 100%;
+    padding: 10px;
+
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    background: #292a32;
+    color: white;
+
+    outline: none;
+}
+
+#context-size {
+    width: 100%;
+    padding: 10px;
+
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    background: #292a32;
+    color: white;
+
+    outline: none;
+    cursor: pointer;
+}
+
+#context-size option {
+    background: #292a32;
+    color: white;
+}
+
+/* =============================
+   BOTÓN DE CONFIGURACIÓN
+   ============================= */
+
+.settings-button {
+    width: 32px !important;
+    height: 32px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    border: none !important;
+    outline: none !important;
+
+    background: transparent !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border-radius: 10px !important;
+
+    cursor: pointer !important;
+
+    appearance: none !important;
+    -webkit-appearance: none !important;
+
+    box-shadow: none !important;
+}
+
+.settings-button span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: rgba(255, 255, 255, 0.75) !important;
+
+    font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+
+    background: transparent !important;
+}
+
+.settings-button:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.settings-button:hover span {
+    color: white !important;
+}
+
+.settings-button:active {
+    background: rgba(255, 255, 255, 0.12) !important;
+}

@@ -20,6 +20,15 @@ const conversationList =
 const conversationNewButton =
     document.getElementById("conversation-new-button");
 
+const settingsButton =
+    document.getElementById("settings-button");
+
+const settingsPanel =
+    document.getElementById("settings-panel");
+
+const closeSettings =
+    document.getElementById("close-settings");
+
 const renameDialog =
     document.getElementById("rename-dialog");
 
@@ -67,11 +76,12 @@ bubble.addEventListener("click", () => {
 
 closeButton.addEventListener("click", () => {
 
+    settingsPanel.classList.add("hidden");
+
     chatWindow.style.display = "none";
     bubble.style.display = "flex";
 
     window.nova.close();
-
 });
 
 
@@ -643,3 +653,237 @@ conversationButton.addEventListener(
 
     }
 );
+
+// =============================
+// CONFIGURACIÓN
+// =============================
+
+settingsButton.addEventListener('click', () => {
+
+    settingsPanel.classList.remove('hidden');
+
+});
+
+closeSettings.addEventListener('click', () => {
+
+    settingsPanel.classList.add('hidden');
+
+});
+
+// =============================
+// CARGAR MODELOS DE OLLAMA
+// =============================
+
+async function loadModels() {
+
+    const modelSelect = document.getElementById('model-select');
+
+    try {
+
+        const models = await window.nova.getModels();
+
+        modelSelect.innerHTML = '';
+
+        if (!models || models.length === 0) {
+
+            const option = document.createElement('option');
+
+            option.value = '';
+            option.textContent = 'No hay modelos instalados';
+
+            modelSelect.appendChild(option);
+
+            return;
+        }
+
+        models.forEach((model) => {
+
+            const option = document.createElement('option');
+
+            option.value = model.name;
+            option.textContent = model.name;
+
+            modelSelect.appendChild(option);
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            'ERROR AL CARGAR MODELOS:',
+            error
+        );
+
+        modelSelect.innerHTML = '';
+
+        const option = document.createElement('option');
+
+        option.value = '';
+        option.textContent = 'Error al cargar modelos';
+
+        modelSelect.appendChild(option);
+
+    }
+
+}
+
+async function loadSelectedModel() {
+
+    const modelSelect = document.getElementById('model-select');
+
+    try {
+
+        const selectedModel =
+            await window.nova.getSelectedModel();
+
+        if (selectedModel) {
+            modelSelect.value = selectedModel;
+        }
+
+    } catch (error) {
+
+        console.error(
+            'ERROR AL CARGAR MODELO SELECCIONADO:',
+            error
+        );
+
+    }
+
+}
+
+document.getElementById('model-select').addEventListener(
+    'change',
+    async (event) => {
+
+        const model = event.target.value;
+
+        if (!model) return;
+
+        const saved =
+            await window.nova.setModel(model);
+
+        if (saved) {
+            console.log(
+                'MODELO SELECCIONADO:',
+                model
+            );
+        }
+
+    }
+);
+
+// =============================
+// TEMPERATURA
+// =============================
+
+const temperature = document.getElementById('temperature');
+const temperatureValue = document.getElementById('temperature-value');
+
+temperature.addEventListener('input', () => {
+
+    temperatureValue.textContent = temperature.value;
+
+});
+
+const contextSize =
+    document.getElementById('context-size');
+
+
+async function loadContextSize() {
+
+    try {
+
+        const value =
+            await window.nova.getContextSize();
+
+        if (
+            value !== null &&
+            value !== undefined
+        ) {
+            contextSize.value = value;
+        }
+
+    } catch (error) {
+
+        console.error(
+            'ERROR AL CARGAR TAMAÑO DE CONTEXTO:',
+            error
+        );
+
+    }
+
+}
+
+
+contextSize.addEventListener('change', async () => {
+
+    console.log(
+        'TAMAÑO DE CONTEXTO CAMBIADO:',
+        contextSize.value
+    );
+
+    const saved =
+        await window.nova.setContextSize(
+            contextSize.value
+        );
+
+    console.log(
+        'TAMAÑO DE CONTEXTO GUARDADO:',
+        saved
+    );
+
+});
+
+async function loadTemperature() {
+
+    try {
+
+        const value = await window.nova.getTemperature();
+
+        if (value !== null && value !== undefined) {
+
+            temperature.value = value;
+            temperatureValue.textContent = value;
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            'ERROR AL CARGAR TEMPERATURA:',
+            error
+        );
+
+    }
+
+}
+
+temperature.addEventListener('change', async () => {
+
+    console.log(
+        'TEMPERATURA CAMBIADA:',
+        temperature.value
+    );
+
+    const saved = await window.nova.setTemperature(
+        temperature.value
+    );
+
+    console.log(
+        'TEMPERATURA GUARDADA:',
+        saved
+    );
+
+});
+
+// =============================
+// CARGAR CONFIGURACIÓN INICIAL
+// =============================
+
+loadModels().then(() => {
+
+    loadSelectedModel();
+    loadTemperature();
+    loadContextSize();
+
+});

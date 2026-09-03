@@ -30,7 +30,17 @@ async function getModels() {
 }
 
 
-async function chat(model, messages, onChunk, signal) {
+async function chat(model, messages, onChunk, signal, temperature, contextSize) {
+
+    console.log('TEMPERATURA ENVIADA A OLLAMA:', temperature);
+
+    console.log(
+        'PARÁMETROS ENVIADOS A OLLAMA:',
+        {
+            temperature,
+            contextSize
+        }
+    );
 
     const response = await fetch(`${OLLAMA_URL}/api/chat`, {
 
@@ -43,7 +53,11 @@ async function chat(model, messages, onChunk, signal) {
         body: JSON.stringify({
             model,
             messages,
-            stream: true
+            stream: true,
+            options: {
+                temperature,
+                num_ctx: contextSize
+            }
         }),
 
         signal
