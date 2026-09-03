@@ -33,18 +33,130 @@
 
                 <div class="nova-title">
 
+                    <button
+                        class="conversation-button"
+                        id="conversation-button"
+                        aria-label="Conversaciones"
+                    >
+                        ☰
+                    </button>
+
                     <span class="nova-icon"></span>
 
                     <span>NOVA</span>
 
                 </div>
 
-                <button class="close-button" id="close-button">
-                    ×
-                </button>
+                <div class="header-actions">
+
+                    <button
+                        class="new-chat-button"
+                        id="new-chat-button"
+                        aria-label="Nueva conversación"
+                    >
+                    </button>
+
+                    <button
+                        class="close-button"
+                        id="close-button"
+                    >
+                        ×
+                    </button>
+
+                </div>
 
             </div>
 
+            <div class="conversation-panel" id="conversation-panel">
+
+                <div class="conversation-panel-header">
+
+                    <span>Conversaciones</span>
+
+                </div>
+
+                <button
+                    class="conversation-new-button"
+                    id="conversation-new-button"
+                >
+                    + Nueva conversación
+                </button>
+
+                <div
+                    class="conversation-list"
+                    id="conversation-list"
+                >
+                </div>
+
+                <div
+                    class="delete-dialog"
+                    id="delete-dialog"
+                >
+                    <div class="delete-dialog-box">
+
+                        <div class="delete-dialog-title">
+                            ¿Eliminar esta conversación?
+                        </div>
+
+                        <div class="delete-dialog-text">
+                            Esta acción no se puede deshacer.
+                        </div>
+
+                        <div class="delete-dialog-actions">
+
+                            <button id="delete-cancel-button">
+                                Cancelar
+                            </button>
+
+                            <button id="delete-confirm-button">
+                                Eliminar
+                            </button>
+
+                        </div>
+
+                    </div>
+                </div>
+
+                <div
+                    class="rename-dialog"
+                    id="rename-dialog"
+                >
+                    
+
+                    <div class="rename-dialog-box">
+
+                        <div class="rename-dialog-title">
+                            Renombrar conversación
+                        </div>
+
+                        <input
+                            type="text"
+                            id="rename-input"
+                            placeholder="Nombre de la conversación"
+                            autocomplete="off"
+                        >
+
+                        <div class="rename-dialog-actions">
+
+                            <button
+                                id="rename-cancel-button"
+                            >
+                                Cancelar
+                            </button>
+
+                            <button
+                                id="rename-confirm-button"
+                            >
+                                Guardar
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>            
 
             <div class="chat-messages" id="chat-messages">
 

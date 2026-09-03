@@ -1,4 +1,5 @@
 const ollama = require('../ai/ollama');
+const messagesRepository = require('../database/repositories/messages');
 
 const SYSTEM_PROMPT = `
 Eres NOVA, un asistente virtual de escritorio local.
@@ -11,18 +12,41 @@ Actualmente estás funcionando de forma local mediante Ollama.
 `;
 
 
-async function processMessage(userMessage, model, onChunk, signal) {
+async function processMessage(
+    userMessage,
+    model,
+    onChunk,
+    signal,
+    conversationId
+) {
+
+    const history = conversationId
+        ? messagesRepository.getMessages(conversationId)
+        : [];
+
+    console.log(
+        'HISTORIAL RECUPERADO:',
+        history
+    );
+
 
     const messages = [
         {
             role: 'system',
             content: SYSTEM_PROMPT
         },
-        {
-            role: 'user',
-            content: userMessage
-        }
+
+        ...history.map((message) => ({
+            role: message.role,
+            content: message.content
+        }))
     ];
+
+
+    console.log(
+        'MENSAJES ENVIADOS A OLLAMA:',
+        messages
+    );
 
 
     const response = await ollama.chat(

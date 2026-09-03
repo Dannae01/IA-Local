@@ -16,6 +16,43 @@ contextBridge.exposeInMainWorld('nova', {
         ipcRenderer.send('nova-stop');
     },
 
+    newConversation: () => {
+        return ipcRenderer.invoke('nova-new-conversation');
+    },
+
+    getConversations: () => {
+        return ipcRenderer.invoke('nova-get-conversations');
+    },
+
+    getMessages: (conversationId) => {
+        return ipcRenderer.invoke(
+            'nova-get-messages',
+            conversationId
+        );
+    },    
+
+    selectConversation: (conversationId) => {
+        return ipcRenderer.invoke(
+            'nova-select-conversation',
+            conversationId
+        );
+    },    
+
+    deleteConversation: (conversationId) => {
+        return ipcRenderer.invoke(
+            'nova-delete-conversation',
+            conversationId
+        );
+    },
+
+    renameConversation: (conversationId, title) => {
+        return ipcRenderer.invoke(
+            'nova-rename-conversation',
+            conversationId,
+            title
+        );
+    },
+
     sendMessage: (message) => {
         return ipcRenderer.invoke('nova-message', message);
     },
