@@ -9,7 +9,11 @@
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "mammoth": "^1.12.2",
+    "pdf-parse": "^2.4.5",
+    "pptx2json": "^0.0.10",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "electron": "^44.1.1"

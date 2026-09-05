@@ -20,6 +20,63 @@ contextBridge.exposeInMainWorld('nova', {
         return ipcRenderer.invoke('nova-new-conversation');
     },
 
+    getConversationDocuments: (conversationId) =>
+        ipcRenderer.invoke(
+            'nova-get-conversation-documents',
+            conversationId
+        ),
+
+    removeDocumentFromConversation: (
+        conversationId,
+        documentId
+    ) =>
+        ipcRenderer.invoke(
+            'nova-remove-document-from-conversation',
+            {
+                conversationId,
+                documentId
+            }
+        ),
+
+    deleteDocument: (documentId) =>
+        ipcRenderer.invoke(
+            'nova-delete-document',
+            documentId
+        ),
+
+    // ================================
+    // MEMORIAS DE NOVA
+    // ================================
+
+    createMemory: (memory) =>
+        ipcRenderer.invoke(
+            'nova-create-memory',
+            memory
+        ),
+
+    getMemories: () =>
+        ipcRenderer.invoke(
+            'nova-get-memories'
+        ),
+
+    searchMemories: (query) =>
+        ipcRenderer.invoke(
+            'nova-search-memories',
+            query
+        ),
+
+    updateMemory: (memory) =>
+        ipcRenderer.invoke(
+            'nova-update-memory',
+            memory
+        ),
+
+    deleteMemory: (memoryId) =>
+        ipcRenderer.invoke(
+            'nova-delete-memory',
+            memoryId
+        ),
+
     getConversations: () => {
         return ipcRenderer.invoke('nova-get-conversations');
     },
@@ -55,6 +112,87 @@ contextBridge.exposeInMainWorld('nova', {
 
     sendMessage: (message) => {
         return ipcRenderer.invoke('nova-message', message);
+    },
+
+    getModels: () => {
+        return ipcRenderer.invoke('nova-get-models');
+    },
+
+    setModel: (model) => {
+        return ipcRenderer.invoke(
+            'nova-set-model',
+            model
+        );
+    },
+
+    getSelectedModel: () => {
+        return ipcRenderer.invoke(
+            'nova-get-selected-model'
+        );
+    },
+
+    getTemperature: () => {
+        return ipcRenderer.invoke(
+            'nova-get-temperature'
+        );
+    },
+
+    setTemperature: (value) => {
+        return ipcRenderer.invoke(
+            'nova-set-temperature',
+            value
+        );
+    },
+
+    getContextSize: () => {
+        return ipcRenderer.invoke(
+            'nova-get-context-size'
+        );
+    },
+
+    setContextSize: (value) => {
+        return ipcRenderer.invoke(
+            'nova-set-context-size',
+            value
+        );
+    },
+
+    importDocument: () => {
+        return ipcRenderer.invoke(
+            'nova-import-document'
+        );
+    },
+
+    getConversationDocuments: (conversationId) =>
+        ipcRenderer.invoke(
+            'nova-get-conversation-documents',
+            conversationId
+        ),
+
+    removeDocumentFromConversation: (
+        conversationId,
+        documentId
+    ) =>
+        ipcRenderer.invoke(
+            'nova-remove-document-from-conversation',
+            {
+                conversationId,
+                documentId
+            }
+        ),
+
+    onDocumentProgress: (callback) => {
+
+        ipcRenderer.removeAllListeners(
+            'nova-document-progress'
+        );
+
+        ipcRenderer.on(
+            'nova-document-progress',
+            (event, data) => {
+                callback(data);
+            }
+        );
     },
 
     onStream: (callback) => {
