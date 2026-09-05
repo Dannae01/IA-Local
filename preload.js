@@ -20,6 +20,30 @@ contextBridge.exposeInMainWorld('nova', {
         return ipcRenderer.invoke('nova-new-conversation');
     },
 
+    getConversationDocuments: (conversationId) =>
+        ipcRenderer.invoke(
+            'nova-get-conversation-documents',
+            conversationId
+        ),
+
+    removeDocumentFromConversation: (
+        conversationId,
+        documentId
+    ) =>
+        ipcRenderer.invoke(
+            'nova-remove-document-from-conversation',
+            {
+                conversationId,
+                documentId
+            }
+        ),
+
+    deleteDocument: (documentId) =>
+        ipcRenderer.invoke(
+            'nova-delete-document',
+            documentId
+        ),
+
     getConversations: () => {
         return ipcRenderer.invoke('nova-get-conversations');
     },
@@ -97,6 +121,44 @@ contextBridge.exposeInMainWorld('nova', {
         return ipcRenderer.invoke(
             'nova-set-context-size',
             value
+        );
+    },
+
+    importDocument: () => {
+        return ipcRenderer.invoke(
+            'nova-import-document'
+        );
+    },
+
+    getConversationDocuments: (conversationId) =>
+        ipcRenderer.invoke(
+            'nova-get-conversation-documents',
+            conversationId
+        ),
+
+    removeDocumentFromConversation: (
+        conversationId,
+        documentId
+    ) =>
+        ipcRenderer.invoke(
+            'nova-remove-document-from-conversation',
+            {
+                conversationId,
+                documentId
+            }
+        ),
+
+    onDocumentProgress: (callback) => {
+
+        ipcRenderer.removeAllListeners(
+            'nova-document-progress'
+        );
+
+        ipcRenderer.on(
+            'nova-document-progress',
+            (event, data) => {
+                callback(data);
+            }
         );
     },
 

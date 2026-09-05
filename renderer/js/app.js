@@ -1,11 +1,21 @@
 console.log("NOVA iniciada");
-
+console.log("APP.JS NUEVO CARGADO");
 const bubble = document.getElementById("bubble");
 const chatWindow = document.getElementById("chat-window");
 const closeButton = document.getElementById("close-button");
 const input = document.getElementById("chat-input");
 const sendButton = document.getElementById("send-button");
 const messages = document.getElementById("chat-messages");
+
+const conversationDocuments =
+    document.getElementById(
+        "conversation-documents"
+    );
+
+const importDocumentButton =
+    document.getElementById(
+        "import-document-button"
+    );
 
 const newChatButton = document.getElementById("new-chat-button");
 const conversationButton =
@@ -55,6 +65,120 @@ const renameConfirmButton =
     );
 
 let selectedConversationForAction = null;
+
+let currentConversationId = null;
+
+async function loadConversationDocuments() {
+
+    conversationDocuments.innerHTML = "";
+
+    if (!currentConversationId) {
+        return;
+    }
+
+    try {
+
+        const documents =
+            await window.nova.getConversationDocuments(
+                currentConversationId
+            );
+
+        console.log(
+            "DOCUMENTOS DE LA CONVERSACIÓN:",
+            documents
+        );
+
+        if (!documents || documents.length === 0) {
+            return;
+        }
+
+        documents.forEach((doc) => {
+
+            const documentItem =
+                document.createElement("div");
+
+            documentItem.classList.add(
+                "conversation-document"
+            );
+
+            const documentName =
+                document.createElement("span");
+
+            documentName.textContent =
+                doc.name;
+
+            const removeButton =
+                document.createElement("button");
+
+            removeButton.textContent = "×";
+
+            removeButton.classList.add(
+                "conversation-document-remove"
+            );
+
+            removeButton.title =
+                "Quitar documento de la conversación";
+
+            removeButton.addEventListener(
+                "click",
+                async () => {
+
+                    const confirmed = confirm(
+                        `¿Eliminar "${doc.name}" de NOVA?\n\n`
+                    );
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    const result =
+                        await window.nova
+                            .deleteDocument(
+                                doc.id
+                            );
+
+                    if (result.success) {
+
+                        await loadConversationDocuments();
+
+                    } else {
+
+                        console.error(
+                            "ERROR AL ELIMINAR DOCUMENTO DE NOVA:",
+                            result.error
+                        );
+
+                        alert(
+                            "No se pudo eliminar el documento de NOVA."
+                        );
+                    }
+
+                }
+            );
+
+            documentItem.appendChild(
+                documentName
+            );
+
+            documentItem.appendChild(
+                removeButton
+            );
+
+            conversationDocuments.appendChild(
+                documentItem
+            );
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "ERROR AL CARGAR DOCUMENTOS DE LA CONVERSACIÓN:",
+            error
+        );
+
+    }
+}
 
 /* Abrir NOVA */
 
@@ -211,16 +335,29 @@ async function createNewConversation() {
         const result =
             await window.nova.newConversation();
 
-        if (!result.success) {
+        console.log("RESULTADO NUEVA CONVERSACIÓN:", result);
+
+        if (!result || !result.success) {
 
             console.error(
-                "No se pudo crear la conversación."
+                "No se pudo crear la conversación.",
+                result
             );
 
             return;
 
         }
 
+        console.log(
+            "ID RECIBIDO:",
+            result.conversationId
+        );
+
+        currentConversationId =
+            result.conversationId;
+        
+        await loadConversationDocuments();
+        
         messages.innerHTML = "";
 
         const novaMessage =
@@ -319,6 +456,10 @@ async function loadConversations() {
                         await window.nova.selectConversation(
                             conversation.id
                         );
+
+                        currentConversationId = conversation.id;
+
+                        await loadConversationDocuments();
 
                         const selectedConversation =
                             await window.nova.getMessages(
@@ -887,3 +1028,74 @@ loadModels().then(() => {
     loadContextSize();
 
 });
+
+// =============================
+// IMPORTAR DOCUMENTOS
+// =============================
+
+importDocumentButton.addEventListener(
+    "click",
+    async () => {
+
+        importDocumentButton.disabled = true;
+
+        try {
+
+            const result =
+                await window.nova.importDocument();
+
+            if (
+                result.canceled
+            ) {
+                return;
+            }
+
+            if (
+                !result.success
+            ) {
+
+                console.error(
+                    "ERROR AL IMPORTAR:",
+                    result.error
+                );
+
+                return;
+            }
+
+            console.log(
+                "DOCUMENTO IMPORTADO:",
+                result.document
+            );
+
+            await loadConversationDocuments();
+
+        } catch (error) {
+
+            console.error(
+                "ERROR AL IMPORTAR DOCUMENTO:",
+                error
+            );
+
+        } finally {
+
+            importDocumentButton.disabled = false;
+        }
+    }
+);
+
+
+// Progreso de importación
+
+window.nova.onDocumentProgress(
+    (data) => {
+
+        console.log(
+            "PROGRESO DOCUMENTO:",
+            data
+        );
+
+        
+
+    }
+);
+

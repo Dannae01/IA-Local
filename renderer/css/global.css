@@ -191,6 +191,7 @@ body {
 
 .chat-messages {
     flex: 1;
+    min-height: 0;
 
     padding: 20px;
 
@@ -732,4 +733,92 @@ body {
 
 .settings-button:active {
     background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ============================= */
+/* DOCUMENTOS DE LA CONVERSACIÓN */
+/* ============================= */
+
+.conversation-documents {
+    flex: 0 1 auto;
+
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    max-height: 90px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    padding: 8px 12px;
+
+    box-sizing: border-box;
+
+    background: rgba(25, 25, 29, 0.92);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+    flex-shrink: 1;
+}
+
+/* Cuando no existen documentos,
+   desaparece completamente */
+
+.conversation-documents:empty {
+    display: none;
+}
+
+.conversation-document {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    max-width: 280px;
+    min-width: 0;
+
+    padding: 7px 10px;
+
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+
+    flex-shrink: 0;
+}
+
+.conversation-document span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.conversation-document-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 20px;
+    height: 20px;
+
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+
+    cursor: pointer;
+
+    font-size: 16px;
+    line-height: 1;
+
+    opacity: 0.7;
+}
+
+.conversation-document-remove:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.10);
+    color: white;
 }
