@@ -105,6 +105,29 @@ function initializeDatabase() {
                 ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS memories (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            type TEXT NOT NULL,
+
+            content TEXT NOT NULL,
+
+            source TEXT,
+
+            importance INTEGER DEFAULT 1,
+
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_memories_type
+        ON memories(type);
+
+        CREATE INDEX IF NOT EXISTS idx_memories_importance
+        ON memories(importance);
+
         CREATE INDEX IF NOT EXISTS
         idx_conversation_documents_conversation
         ON conversation_documents(conversation_id);
@@ -132,6 +155,17 @@ function initializeDatabase() {
             throw error;
         }
 
+    }
+
+    try {
+        db.prepare(`
+            ALTER TABLE memories
+            ADD COLUMN embedding TEXT
+        `).run();
+    } catch (error) {
+        if (!error.message.includes('duplicate column name')) {
+            throw error;
+        }
     }
 
     console.log('Tablas de NOVA inicializadas.');

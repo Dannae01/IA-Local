@@ -5,6 +5,16 @@ const {
     searchSimilarChunks
 } = require('../rag/retriever');
 
+const {
+    findRelevantMemories,
+    formatMemoriesForPrompt,
+    saveMemoryIfNew
+} = require('../memory/memoryManager');
+
+const {
+    detectMemoryCandidate
+} = require('../memory/memoryDetector');
+
 const SYSTEM_PROMPT = `
 Eres NOVA, un asistente virtual de escritorio local.
 
@@ -13,6 +23,12 @@ Tu función es ayudar al usuario de forma clara, útil y natural.
 Responde directamente a lo que el usuario necesita.
 
 Actualmente estás funcionando de forma local mediante Ollama.
+
+Las MEMORIAS RELEVANTES DEL USUARIO contienen información previamente guardada que puede ayudarte a personalizar tus respuestas.
+
+Utiliza esas memorias cuando sean relevantes para la solicitud actual.
+
+No menciones las memorias ni su sistema interno al usuario, a menos que te pregunte explícitamente sobre ellas.
 
 Cuando recibas CONTEXTO DE DOCUMENTOS, utilízalo para responder las preguntas relacionadas con esos documentos.
 
@@ -46,6 +62,52 @@ async function processMessage(
 
     console.log('CHUNKS RELEVANTES:', relevantChunks);
 
+    const memoryCandidate =
+        detectMemoryCandidate(
+            userMessage
+        );
+
+    if (memoryCandidate) {
+        try {
+            const memoryResult =
+                await saveMemoryIfNew(
+                    memoryCandidate
+                );
+
+            if (memoryResult.saved) {
+                console.log(
+                    `Nueva memoria guardada: ${memoryResult.id}`
+                );
+            }
+        } catch (error) {
+            console.error(
+                'ERROR AL GUARDAR MEMORIA AUTOMÁTICA:',
+                error
+            );
+        }
+    }
+
+const relevantMemories =
+    await findRelevantMemories(
+        userMessage,
+        5
+    );
+
+    console.log(
+        `Memorias relevantes encontradas: ${relevantMemories.length}`
+    );
+
+    const memoryContext =
+        relevantMemories.length > 0
+            ? `
+    MEMORIAS RELEVANTES DEL USUARIO:
+
+    ${formatMemoriesForPrompt(
+        relevantMemories
+    )}
+    `
+            : '';
+
     const ragContext =
         relevantChunks.length > 0
             ? `
@@ -65,7 +127,7 @@ ${chunk.content}`
     const messages = [
         {
             role: 'system',
-            content: SYSTEM_PROMPT + ragContext
+            content: SYSTEM_PROMPT + memoryContext + ragContext
         },
         ...history.map((message) => ({
             role: message.role,

@@ -44,6 +44,39 @@ contextBridge.exposeInMainWorld('nova', {
             documentId
         ),
 
+    // ================================
+    // MEMORIAS DE NOVA
+    // ================================
+
+    createMemory: (memory) =>
+        ipcRenderer.invoke(
+            'nova-create-memory',
+            memory
+        ),
+
+    getMemories: () =>
+        ipcRenderer.invoke(
+            'nova-get-memories'
+        ),
+
+    searchMemories: (query) =>
+        ipcRenderer.invoke(
+            'nova-search-memories',
+            query
+        ),
+
+    updateMemory: (memory) =>
+        ipcRenderer.invoke(
+            'nova-update-memory',
+            memory
+        ),
+
+    deleteMemory: (memoryId) =>
+        ipcRenderer.invoke(
+            'nova-delete-memory',
+            memoryId
+        ),
+
     getConversations: () => {
         return ipcRenderer.invoke('nova-get-conversations');
     },
