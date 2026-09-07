@@ -290,8 +290,11 @@ async function sendMessage() {
             const result = await window.nova.sendMessage(text);
 
             if (result.success || result.stopped) {
-                // Mostrar exactamente el contenido guardado.
-                novaMessage.textContent = result.response;
+                window.novaResponseRenderer
+                    .renderAssistantMessage(
+                        novaMessage,
+                        result.response
+                    );
             } else {
                 novaMessage.textContent =
                     result.error || 'No se pudo procesar el mensaje.';
@@ -430,7 +433,17 @@ async function openConversation(conversationId) {
                 message.role === 'user' ? 'user-message' : 'nova-message'
             );
 
-            element.textContent = message.content;
+            if (message.role === 'user') {
+                element.textContent =
+                    message.content;
+            } else {
+                window.novaResponseRenderer
+                    .renderAssistantMessage(
+                        element,
+                        message.content
+                    );
+            }
+
             messages.appendChild(element);
         }
 
