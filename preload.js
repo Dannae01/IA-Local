@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld('nova', {
         return ipcRenderer.invoke('nova-new-conversation');
     },
 
+    ensureConversation: (title) => {
+        return ipcRenderer.invoke('nova-ensure-conversation', title);
+    },
+
     getConversationDocuments: (conversationId) =>
         ipcRenderer.invoke(
             'nova-get-conversation-documents',

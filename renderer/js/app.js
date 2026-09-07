@@ -68,20 +68,48 @@ let selectedConversationForAction = null;
 
 let currentConversationId = null;
 
+let isImporting = false;
+
+let isChangingConversation = false;
+
+let documentLoadVersion = 0;
+let conversationListVersion = 0;
+
+async function prepareCurrentConversation(title) {
+    const result = await window.nova.ensureConversation(title);
+
+    if (!result?.success || !result.conversationId) {
+        throw new Error(
+            result?.error || 'No se pudo preparar la conversación.'
+        );
+    }
+
+    currentConversationId = result.conversationId;
+
+    return currentConversationId;
+}
+
 async function loadConversationDocuments() {
+    const requestVersion = ++documentLoadVersion;
+    const conversationId = currentConversationId;
 
-    conversationDocuments.innerHTML = "";
+    conversationDocuments.innerHTML = '';
 
-    if (!currentConversationId) {
+    if (!conversationId) {
         return;
     }
 
     try {
+        const documents = await window.nova.getConversationDocuments(
+            conversationId
+        );
 
-        const documents =
-            await window.nova.getConversationDocuments(
-                currentConversationId
-            );
+        if (
+            requestVersion !== documentLoadVersion ||
+            conversationId !== currentConversationId
+        ) {
+            return;
+        }
 
         console.log(
             "DOCUMENTOS DE LA CONVERSACIÓN:",
@@ -214,7 +242,7 @@ closeButton.addEventListener("click", () => {
 let isGenerating = false;
 
 async function sendMessage() {
-    if (isGenerating) {
+    if (isGenerating || isImporting || isChangingConversation) {
         return;
     }
 
@@ -239,9 +267,9 @@ async function sendMessage() {
         novaMessage.classList.add('message', 'nova-message');
         messages.appendChild(novaMessage);
 
-        sendButton.textContent = '■';
+        sendButton.textContent = '…';
         sendButton.classList.add('stop-button');
-        sendButton.disabled = false;
+        sendButton.disabled = true;
 
         messages.scrollTop = messages.scrollHeight;
 
@@ -253,6 +281,12 @@ async function sendMessage() {
         });
 
         try {
+            await prepareCurrentConversation(text);
+            await loadConversationDocuments();
+
+            sendButton.textContent = '■';
+            sendButton.disabled = false;
+
             const result = await window.nova.sendMessage(text);
 
             if (result.success || result.stopped) {
@@ -306,75 +340,44 @@ input.addEventListener('keydown', (event) => {
 
 /* Nueva conversación */
 async function createNewConversation() {
-
-    try {
-
-        const result =
-            await window.nova.newConversation();
-
-        console.log("RESULTADO NUEVA CONVERSACIÓN:", result);
-
-        if (!result || !result.success) {
-
-            console.error(
-                "No se pudo crear la conversación.",
-                result
-            );
-
-            return;
-
-        }
-
-        console.log(
-            "ID RECIBIDO:",
-            result.conversationId
-        );
-
-        currentConversationId =
-            result.conversationId;
-        
-        await loadConversationDocuments();
-        
-        messages.innerHTML = "";
-
-        const novaMessage =
-            document.createElement("div");
-
-        novaMessage.classList.add(
-            "message",
-            "nova-message"
-        );
-
-        novaMessage.innerHTML =
-            "Nueva conversación iniciada.<br>" +
-            "¿En qué puedo ayudarte?";
-
-        messages.appendChild(
-            novaMessage
-        );
-
-        input.value = "";
-        input.focus();
-
-        // Actualizar la lista de conversaciones
-        await loadConversations();
-
-        // Cerrar el panel
-        conversationPanel.classList.remove(
-            "conversation-panel-open"
-        );
-
-    } catch (error) {
-
-        console.error(
-            "ERROR AL CREAR CONVERSACIÓN:",
-            error
-        );
-
+    if (isGenerating || isImporting || isChangingConversation) {
+        return;
     }
 
-}
+    isChangingConversation = true;
 
+    try {
+        const result = await window.nova.newConversation();
+
+        if (!result?.success || !result.conversationId) {
+            throw new Error(
+                result?.error || 'No se pudo crear la conversación.'
+            );
+        }
+
+        currentConversationId = result.conversationId;
+        messages.innerHTML = '';
+        input.value = '';
+
+        const notice = document.createElement('div');
+        notice.classList.add('message', 'nova-message');
+        notice.textContent =
+            'Nueva conversación iniciada. ¿En qué puedo ayudarte?';
+
+        messages.appendChild(notice);
+
+        await loadConversationDocuments();
+        await loadConversations();
+
+        conversationPanel.classList.remove('conversation-panel-open');
+        input.focus();
+    } catch (error) {
+        console.error('ERROR AL CREAR CONVERSACIÓN:', error);
+        alert(error.message);
+    } finally {
+        isChangingConversation = false;
+    }
+}
 
 /* Botón + de la barra superior */
 newChatButton.addEventListener(
@@ -391,12 +394,68 @@ conversationNewButton.addEventListener(
 
 /* Panel de conversaciones */
 
-async function loadConversations() {
+async function openConversation(conversationId) {
+    if (isGenerating || isImporting || isChangingConversation) {
+        return;
+    }
+
+    isChangingConversation = true;
 
     try {
+        const history = await window.nova.getMessages(conversationId);
 
-        const conversations =
-            await window.nova.getConversations();
+        if (!Array.isArray(history)) {
+            throw new Error('No se pudo cargar el historial.');
+        }
+
+        const result = await window.nova.selectConversation(
+            conversationId
+        );
+
+        if (!result?.success) {
+            throw new Error(
+                result?.error || 'No se pudo seleccionar la conversación.'
+            );
+        }
+
+        currentConversationId = conversationId;
+        messages.innerHTML = '';
+        input.value = '';
+
+        for (const message of history) {
+            const element = document.createElement('div');
+
+            element.classList.add(
+                'message',
+                message.role === 'user' ? 'user-message' : 'nova-message'
+            );
+
+            element.textContent = message.content;
+            messages.appendChild(element);
+        }
+
+        await loadConversationDocuments();
+
+        conversationPanel.classList.remove('conversation-panel-open');
+        messages.scrollTop = messages.scrollHeight;
+        input.focus();
+    } catch (error) {
+        console.error('ERROR AL CARGAR CONVERSACIÓN:', error);
+        alert(error.message);
+    } finally {
+        isChangingConversation = false;
+    }
+}
+
+async function loadConversations() {
+    const requestVersion = ++conversationListVersion;
+
+    try {
+        const conversations = await window.nova.getConversations();
+
+        if (requestVersion !== conversationListVersion) {
+            return;
+        }
 
         console.log(
             "CONVERSACIONES RECIBIDAS:",
@@ -424,83 +483,9 @@ async function loadConversations() {
             title.textContent =
                 conversation.title;
 
-            title.addEventListener(
-                "click",
-                async () => {
-
-                    try {
-
-                        await window.nova.selectConversation(
-                            conversation.id
-                        );
-
-                        currentConversationId = conversation.id;
-
-                        await loadConversationDocuments();
-
-                        const selectedConversation =
-                            await window.nova.getMessages(
-                                conversation.id
-                            );
-
-                        messages.innerHTML = "";
-
-                        selectedConversation.forEach(
-                            (message) => {
-
-                                const messageElement =
-                                    document.createElement("div");
-
-                                messageElement.classList.add(
-                                    "message"
-                                );
-
-                                if (
-                                    message.role === "user"
-                                ) {
-
-                                    messageElement.classList.add(
-                                        "user-message"
-                                    );
-
-                                } else {
-
-                                    messageElement.classList.add(
-                                        "nova-message"
-                                    );
-
-                                }
-
-                                messageElement.textContent =
-                                    message.content;
-
-                                messages.appendChild(
-                                    messageElement
-                                );
-
-                            }
-                        );
-
-                        conversationPanel.classList.remove(
-                            "conversation-panel-open"
-                        );
-
-                        messages.scrollTop =
-                            messages.scrollHeight;
-
-                        input.focus();
-
-                    } catch (error) {
-
-                        console.error(
-                            "ERROR AL CARGAR CONVERSACIÓN:",
-                            error
-                        );
-
-                    }
-
-                }
-            );
+            title.addEventListener('click', () => {
+                openConversation(conversation.id);
+            });
 
             const menuButton =
                 document.createElement("button");
@@ -707,45 +692,62 @@ deleteCancelButton.addEventListener(
     }
 );
 
-deleteConfirmButton.addEventListener(
-    "click",
-    async () => {
-
-        if (!selectedConversationForAction) {
-            return;
-        }
-
-        try {
-
-            const result =
-                await window.nova.deleteConversation(
-                    selectedConversationForAction.id
-                );
-
-            if (result.success) {
-
-                messages.innerHTML = "";
-
-                deleteDialog.classList.remove(
-                    "delete-dialog-open"
-                );
-
-                selectedConversationForAction = null;
-
-                await loadConversations();
-            }
-
-        } catch (error) {
-
-            console.error(
-                "ERROR AL ELIMINAR:",
-                error
-            );
-
-        }
-
+deleteConfirmButton.addEventListener('click', async () => {
+    if (isGenerating || isImporting || isChangingConversation) {
+        return;
     }
-);
+
+    if (!selectedConversationForAction) {
+        return;
+    }
+
+    const conversationIdToDelete = selectedConversationForAction.id;
+
+    isChangingConversation = true;
+    deleteConfirmButton.disabled = true;
+    deleteCancelButton.disabled = true;
+
+    try {
+        const result = await window.nova.deleteConversation(
+            conversationIdToDelete
+        );
+
+        if (!result?.success) {
+            throw new Error(
+                result?.error || 'No se pudo eliminar la conversación.'
+            );
+        }
+
+        // Limpiar la pantalla solo si eliminamos el chat abierto.
+        if (currentConversationId === conversationIdToDelete) {
+            currentConversationId = null;
+            messages.innerHTML = '';
+            input.value = '';
+
+            await loadConversationDocuments();
+
+            const notice = document.createElement('div');
+
+            notice.classList.add('message', 'nova-message');
+            notice.textContent =
+                'Conversación eliminada. Puedes iniciar una nueva.';
+
+            messages.appendChild(notice);
+        }
+
+        deleteDialog.classList.remove('delete-dialog-open');
+        selectedConversationForAction = null;
+
+        await loadConversations();
+    } catch (error) {
+        console.error('ERROR AL ELIMINAR CONVERSACIÓN:', error);
+        alert(error.message);
+    } finally {
+        isChangingConversation = false;
+        deleteConfirmButton.disabled = false;
+        deleteCancelButton.disabled = false;
+    }
+});
 
 /* Abrir / cerrar panel */
 
@@ -1010,55 +1012,41 @@ loadModels().then(() => {
 // IMPORTAR DOCUMENTOS
 // =============================
 
-importDocumentButton.addEventListener(
-    "click",
-    async () => {
-
-        importDocumentButton.disabled = true;
-
-        try {
-
-            const result =
-                await window.nova.importDocument();
-
-            if (
-                result.canceled
-            ) {
-                return;
-            }
-
-            if (
-                !result.success
-            ) {
-
-                console.error(
-                    "ERROR AL IMPORTAR:",
-                    result.error
-                );
-
-                return;
-            }
-
-            console.log(
-                "DOCUMENTO IMPORTADO:",
-                result.document
-            );
-
-            await loadConversationDocuments();
-
-        } catch (error) {
-
-            console.error(
-                "ERROR AL IMPORTAR DOCUMENTO:",
-                error
-            );
-
-        } finally {
-
-            importDocumentButton.disabled = false;
-        }
+importDocumentButton.addEventListener('click', async () => {
+    if (isGenerating || isImporting || isChangingConversation) {
+        return;
     }
-);
+
+    isImporting = true;
+    importDocumentButton.disabled = true;
+    sendButton.disabled = true;
+
+    try {
+        const result = await window.nova.importDocument();
+
+        if (result.canceled) {
+            return;
+        }
+
+        if (!result.success) {
+            throw new Error(
+                result.error || 'No se pudo importar el documento.'
+            );
+        }
+
+        currentConversationId = result.conversationId;
+
+        await loadConversationDocuments();
+        await loadConversations();
+    } catch (error) {
+        console.error('ERROR AL IMPORTAR DOCUMENTO:', error);
+        alert(error.message);
+    } finally {
+        isImporting = false;
+        importDocumentButton.disabled = false;
+        sendButton.disabled = false;
+    }
+});
 
 
 // Progreso de importación
@@ -1071,7 +1059,7 @@ window.nova.onDocumentProgress(
             data
         );
 
-        
+
 
     }
 );
