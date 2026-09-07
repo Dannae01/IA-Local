@@ -173,6 +173,15 @@ contextBridge.exposeInMainWorld('nova', {
         );
     },
 
+    deleteAttachment: (
+        attachmentId
+    ) => {
+        return ipcRenderer.invoke(
+            'nova-delete-attachment',
+            attachmentId
+        );
+    },
+
     getConversationDocuments: (conversationId) =>
         ipcRenderer.invoke(
             'nova-get-conversation-documents',

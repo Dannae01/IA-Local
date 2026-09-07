@@ -67,6 +67,18 @@ function storeAttachment(
     return destination;
 }
 
+function deleteStoredAttachment(
+    filePath
+) {
+    if (
+        filePath &&
+        fs.existsSync(filePath)
+    ) {
+        fs.unlinkSync(filePath);
+    }
+}
+
 module.exports = {
-    storeAttachment
+    storeAttachment,
+    deleteStoredAttachment
 };

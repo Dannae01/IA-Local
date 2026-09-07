@@ -62,8 +62,37 @@ function getAttachmentsByConversationId(
     );
 }
 
+function getAttachmentById(
+    attachmentId
+) {
+    const statement = db.prepare(`
+        SELECT *
+        FROM message_attachments
+        WHERE id = ?
+    `);
+
+    return statement.get(
+        attachmentId
+    );
+}
+
+function deleteAttachment(
+    attachmentId
+) {
+    const statement = db.prepare(`
+        DELETE FROM message_attachments
+        WHERE id = ?
+    `);
+
+    return statement.run(
+        attachmentId
+    );
+}
+
 module.exports = {
     createAttachment,
     getAttachmentsByMessageId,
-    getAttachmentsByConversationId
+    getAttachmentsByConversationId,
+    getAttachmentById,
+    deleteAttachment
 };

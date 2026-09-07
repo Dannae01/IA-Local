@@ -30,7 +30,8 @@ const attachmentsRepository =
     require('../database/repositories/attachments');
 
 const {
-    storeAttachment
+    storeAttachment,
+    deleteStoredAttachment
 } = require('./attachmentStorage');
 
 const IMAGE_TYPES = {
@@ -308,6 +309,54 @@ function registerAttachmentHandlers(
             } catch (error) {
                 console.error(
                     'ERROR AL ADJUNTAR ARCHIVO:',
+                    error
+                );
+
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+    );
+
+    ipcMain.handle(
+        'nova-delete-attachment',
+        async (event, attachmentId) => {
+            try {
+                const attachment =
+                    attachmentsRepository
+                        .getAttachmentById(
+                            attachmentId
+                        );
+
+                if (!attachment) {
+                    return {
+                        success: false,
+                        error:
+                            'El adjunto no existe.'
+                    };
+                }
+
+                deleteStoredAttachment(
+                    attachment.path
+                );
+
+                const result =
+                    attachmentsRepository
+                        .deleteAttachment(
+                            attachmentId
+                        );
+
+                return {
+                    success: true,
+                    deleted:
+                        result.changes > 0
+                };
+
+            } catch (error) {
+                console.error(
+                    'ERROR AL ELIMINAR ADJUNTO:',
                     error
                 );
 

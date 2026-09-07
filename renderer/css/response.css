@@ -190,8 +190,33 @@
 }
 
 .nova-image-container {
+    position: relative;
     width: 100%;
     margin: 0.6em 0;
+}
+
+.nova-image-delete {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+
+    width: 26px;
+    height: 26px;
+
+    border: 0;
+    border-radius: 50%;
+
+    background: rgba(0, 0, 0, 0.65);
+    color: white;
+
+    font-size: 18px;
+    line-height: 1;
+
+    cursor: pointer;
+}
+
+.nova-image-delete:hover {
+    background: rgba(0, 0, 0, 0.85);
 }
 
 .nova-chat-image {
@@ -208,4 +233,15 @@
     border-radius: 10px;
 
     object-fit: contain;
+}
+
+.nova-image-missing {
+    margin: 0.6em 0;
+    padding: 0.75em;
+
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+
+    font-size: 0.85em;
+    opacity: 0.7;
 }

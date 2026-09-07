@@ -204,6 +204,20 @@ function hydrateAttachments(
                     return attachment;
                 }
 
+                if (
+                    !fs.existsSync(
+                        attachment.path
+                    )
+                ) {
+                    return {
+                        id: attachment.id,
+                        type: attachment.type,
+                        name: attachment.name,
+                        mimeType: attachment.mime_type,
+                        missing: true
+                    };
+                }
+
                 const buffer =
                     fs.readFileSync(
                         attachment.path
@@ -211,6 +225,15 @@ function hydrateAttachments(
 
                 const dataUrl =
                     `data:${attachment.mime_type};base64,${buffer.toString('base64')}`;
+
+                return {
+                    id: attachment.id,
+                    type: attachment.type,
+                    name: attachment.name,
+                    mimeType: attachment.mime_type,
+                    dataUrl,
+                    missing: false
+                };
 
                 return {
                     id:
