@@ -33,6 +33,24 @@ const memoriesRepository =
 let mainWindow;
 let currentAbortController = null;
 
+function ensureCurrentConversation(title = 'Nueva conversación') {
+    const currentId = session.getCurrentConversation();
+
+    if (currentId && conversations.getConversation(currentId)) {
+        return currentId;
+    }
+
+    const safeTitle = typeof title === 'string' && title.trim()
+        ? title.trim().slice(0, 40)
+        : 'Nueva conversación';
+
+    const conversationId = conversations.createConversation(safeTitle);
+
+    session.setCurrentConversation(conversationId);
+
+    return conversationId;
+}
+
 function getBubblePosition() {
     const display = screen.getPrimaryDisplay();
     const workArea = display.workArea;
@@ -159,15 +177,7 @@ ipcMain.handle('nova-message', async (event, message) => {
             10
         );
 
-        conversationId = session.getCurrentConversation();
-
-        if (!conversationId) {
-            conversationId = conversations.createConversation(
-                message.slice(0, 40)
-            );
-
-            session.setCurrentConversation(conversationId);
-        }
+        conversationId = ensureCurrentConversation(message);
 
         messages.createMessage(conversationId, 'user', message);
         userMessageSaved = true;
@@ -264,6 +274,22 @@ ipcMain.handle('nova-message', async (event, message) => {
     }
 });
 
+ipcMain.handle('nova-ensure-conversation', (event, title) => {
+    try {
+        return {
+            success: true,
+            conversationId: ensureCurrentConversation(title)
+        };
+    } catch (error) {
+        console.error('Error al preparar la conversación:', error);
+
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+});
+
 ipcMain.handle('nova-new-conversation', () => {
 
     const conversationId =
@@ -331,6 +357,9 @@ ipcMain.handle(
 
             const filePath = result.filePaths[0];
 
+            const conversationId =
+                ensureCurrentConversation('Nueva conversación');
+
             console.log(
                 'ARCHIVO SELECCIONADO:',
                 filePath
@@ -380,23 +409,17 @@ ipcMain.handle(
                         document
                     );
 
-            const currentConversationId =
-                session.getCurrentConversation();
-
-            if (currentConversationId) {
-
-                conversationDocumentsRepository
-                    .addDocumentToConversation(
-                        currentConversationId,
-                        documentId
-                    );
-
-                console.log(
-                    'DOCUMENTO ASOCIADO A CONVERSACIÓN:',
-                    currentConversationId,
+            conversationDocumentsRepository
+                .addDocumentToConversation(
+                    conversationId,
                     documentId
                 );
-            }
+
+            console.log(
+                'DOCUMENTO ASOCIADO A CONVERSACIÓN:',
+                conversationId,
+                documentId
+            );
 
             // Crear chunks
             const chunks =
@@ -480,16 +503,13 @@ ipcMain.handle(
 
             return {
                 success: true,
-
+                conversationId,
                 document: {
                     id: documentId,
                     name: document.name,
-                    extension:
-                        document.extension,
-                    characters:
-                        document.characters,
-                    chunks:
-                        chunks.length
+                    extension: document.extension,
+                    characters: document.characters,
+                    chunks: chunks.length
                 }
             };
 
@@ -710,6 +730,13 @@ ipcMain.handle('nova-get-messages', (event, conversationId) => {
 
 /* Seleccionar conversación actual */
 ipcMain.handle('nova-select-conversation', (event, conversationId) => {
+
+    if (!conversations.getConversation(conversationId)) {
+        return {
+            success: false,
+            error: 'La conversación ya no existe.'
+        };
+    }
 
     session.setCurrentConversation(conversationId);
 
