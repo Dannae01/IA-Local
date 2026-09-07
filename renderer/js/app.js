@@ -253,7 +253,10 @@ async function sendMessage() {
     }
 
     isGenerating = true;
+
     let acceptingChunks = true;
+    let streamedContent = '';
+    let renderTimer = null;
 
     try {
         const userMessage = document.createElement('div');
@@ -273,11 +276,32 @@ async function sendMessage() {
 
         messages.scrollTop = messages.scrollHeight;
 
-        window.nova.onStream((data) => {
-            if (!acceptingChunks) return;
+        let streamedContent = '';
+        let renderTimer = null;
 
-            novaMessage.textContent += data.chunk;
-            messages.scrollTop = messages.scrollHeight;
+        window.nova.onStream((data) => {
+            if (!acceptingChunks) {
+                return;
+            }
+
+            streamedContent += data.chunk;
+
+            if (renderTimer) {
+                return;
+            }
+
+            renderTimer = setTimeout(() => {
+                renderTimer = null;
+
+                window.novaResponseRenderer
+                    .renderAssistantMessage(
+                        novaMessage,
+                        streamedContent
+                    );
+
+                messages.scrollTop =
+                    messages.scrollHeight;
+            }, 80);
         });
 
         try {
@@ -306,6 +330,12 @@ async function sendMessage() {
             console.error(error);
         }
     } finally {
+
+        if (renderTimer) {
+            clearTimeout(renderTimer);
+            renderTimer = null;
+        }
+
         acceptingChunks = false;
         isGenerating = false;
 

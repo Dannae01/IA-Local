@@ -34,10 +34,19 @@
 }
 
 .nova-message blockquote {
-    margin: 0.7em 0;
-    padding-left: 0.9em;
-    border-left: 3px solid currentColor;
-    opacity: 0.8;
+    margin: 0.8em 0;
+    padding: 0.65em 0.9em;
+
+    border-left: 3px solid rgba(255, 255, 255, 0.35);
+    border-radius: 0 6px 6px 0;
+
+    background: rgba(255, 255, 255, 0.05);
+
+    opacity: 0.9;
+}
+
+.nova-message blockquote p {
+    margin: 0;
 }
 
 .nova-message code {
@@ -70,20 +79,31 @@
 
 .nova-message table {
     width: 100%;
-    margin: 0.7em 0;
+    margin: 0.8em 0;
+
     border-collapse: collapse;
-    font-size: 0.95em;
+    border-radius: 8px;
+
+    font-size: 0.9em;
 }
 
 .nova-message th,
 .nova-message td {
-    padding: 0.45em 0.6em;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0.5em 0.6em;
+
+    border: 1px solid rgba(255, 255, 255, 0.12);
+
     text-align: left;
+    vertical-align: top;
 }
 
 .nova-message th {
     font-weight: 600;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.nova-message tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.025);
 }
 
 .nova-message hr {
@@ -142,5 +162,29 @@
 }
 
 .nova-message pre::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin: 0.8em 0;
+}
+
+.table-wrapper table {
+    margin: 0;
+    min-width: 100%;
+}
+
+.table-wrapper::-webkit-scrollbar {
+    height: 7px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
     background: transparent;
 }

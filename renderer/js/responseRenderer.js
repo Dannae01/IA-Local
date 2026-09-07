@@ -97,7 +97,37 @@ function renderAssistantMessage(
         renderMarkdown(content);
 
     enhanceCodeBlocks(element);
+    enhanceTables(element);
 }
+
+function enhanceTables(element) {
+    const tables =
+        element.querySelectorAll('table');
+
+    tables.forEach((table) => {
+        if (
+            table.parentElement?.classList
+                .contains('table-wrapper')
+        ) {
+            return;
+        }
+
+        const wrapper =
+            document.createElement('div');
+
+        wrapper.className =
+            'table-wrapper';
+
+        table.parentNode.insertBefore(
+            wrapper,
+            table
+        );
+
+        wrapper.appendChild(table);
+    });
+}
+
+
 
 window.novaResponseRenderer = {
     renderAssistantMessage
