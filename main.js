@@ -25,6 +25,10 @@ const {
     registerChatHandlers
 } = require('./src/ipc/chatHandlers');
 
+const {
+    registerWindowHandlers
+} = require('./src/ipc/windowHandlers');
+
 function getBubblePosition() {
     const display = screen.getPrimaryDisplay();
     const workArea = display.workArea;
@@ -81,38 +85,6 @@ function createWindow() {
     );
 }
 
-
-/* Abrir NOVA */
-
-ipcMain.on('nova-open', () => {
-
-    const position = getChatPosition();
-
-    mainWindow.setBounds({
-        x: position.x,
-        y: position.y,
-        width: 400,
-        height: 600
-    });
-
-});
-
-
-/* Cerrar NOVA */
-
-ipcMain.on('nova-close', () => {
-
-    const position = getBubblePosition();
-
-    mainWindow.setBounds({
-        x: position.x,
-        y: position.y,
-        width: 24,
-        height: 24
-    });
-
-});
-
 app.whenReady().then(() => {
 
     migrations.initializeDatabase();
@@ -137,6 +109,13 @@ app.whenReady().then(() => {
 
     registerChatHandlers(
         ipcMain
+    );
+
+    registerWindowHandlers(
+        ipcMain,
+        () => mainWindow,
+        getBubblePosition,
+        getChatPosition
     );
 
     createWindow();
