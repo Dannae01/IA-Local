@@ -9,29 +9,12 @@ const messages = require('./src/database/repositories/messages');
 const settings = require('./src/database/repositories/settings');
 
 const {
-    processDocument
-} = require('./src/rag/documentManager');
-
-const {
-    chunkText
-} = require('./src/rag/chunker');
-
-const {
-    generateEmbedding
-} = require('./src/rag/embeddings');
-
-const documentsRepository =
-    require('./src/database/repositories/documents');
-
-const conversationDocumentsRepository =
-    require('./src/database/repositories/conversationDocuments');
-
-const memoriesRepository =
-    require('./src/database/repositories/memories');
-
-const {
     registerMemoryHandlers
 } = require('./src/ipc/memoryHandlers');
+
+const {
+    registerDocumentHandlers
+} = require('./src/ipc/documentHandlers');
 
 let mainWindow;
 let currentAbortController = null;
@@ -271,234 +254,6 @@ ipcMain.handle('nova-message', async (event, message) => {
     }
 });
 
-/* Importar documento */
-
-ipcMain.handle(
-    'nova-import-document',
-    async (event) => {
-
-        console.log('IPC IMPORTAR DOCUMENTO RECIBIDO');
-
-        try {
-
-            const result =
-                await dialog.showOpenDialog(
-                    mainWindow,
-                    {
-                        title: 'Seleccionar documento',
-                        properties: [
-                            'openFile'
-                        ],
-                        filters: [
-                            {
-                                name: 'Documentos compatibles',
-                                extensions: [
-                                    'txt',
-                                    'md',
-                                    'csv',
-                                    'pdf',
-                                    'docx',
-                                    'pptx',
-                                    'xlsx'
-                                ]
-                            }
-                        ]
-                    }
-                );
-
-            if (
-                result.canceled ||
-                result.filePaths.length === 0
-            ) {
-                return {
-                    success: false,
-                    canceled: true
-                };
-            }
-
-            const filePath = result.filePaths[0];
-
-            const conversationId =
-                ensureCurrentConversation('Nueva conversación');
-
-            console.log(
-                'ARCHIVO SELECCIONADO:',
-                filePath
-            );
-
-            event.sender.send(
-                'nova-document-progress',
-                {
-                    stage: 'processing',
-                    message:
-                        'Procesando documento...'
-                }
-            );
-
-            console.log('INICIANDO PROCESAMIENTO DEL DOCUMENTO');
-
-            const document =
-                await processDocument(filePath);
-
-            console.log(
-                'DOCUMENTO PROCESADO:',
-                document.name,
-                document.characters
-            );
-
-
-            // Comprobar si ya existe
-            const existingDocument =
-                documentsRepository
-                    .getDocumentByPath(
-                        filePath
-                    );
-
-            if (existingDocument) {
-
-                documentsRepository
-                    .deleteDocument(
-                        existingDocument.id
-                    );
-            }
-
-
-            // Crear documento
-            const documentId =
-                documentsRepository
-                    .createDocument(
-                        document
-                    );
-
-            conversationDocumentsRepository
-                .addDocumentToConversation(
-                    conversationId,
-                    documentId
-                );
-
-            console.log(
-                'DOCUMENTO ASOCIADO A CONVERSACIÓN:',
-                conversationId,
-                documentId
-            );
-
-            // Crear chunks
-            const chunks =
-                chunkText(
-                    document.text,
-                    4000,
-                    500
-                );
-
-            console.log(
-                'CHUNKS GENERADOS:',
-                chunks.length
-            );
-
-
-            event.sender.send(
-                'nova-document-progress',
-                {
-                    stage: 'embedding',
-                    message:
-                        `Generando embeddings (0/${chunks.length})...`
-                }
-            );
-
-
-            // Generar embeddings
-            for (
-                let i = 0;
-                i < chunks.length;
-                i++
-            ) {
-
-                console.log(
-                    `GENERANDO EMBEDDING ${i + 1}/${chunks.length}`
-                );
-
-                const embedding =
-                    await generateEmbedding(
-                        chunks[i]
-                    );
-
-                console.log(
-                    `EMBEDDING GENERADO ${i + 1}/${chunks.length}`
-                );
-
-                documentsRepository
-                    .createChunk(
-                        documentId,
-                        i,
-                        chunks[i],
-                        embedding
-                    );
-
-                console.log(
-                    `CHUNK GUARDADO EN SQLITE: ${i + 1}/${chunks.length}`
-                );
-
-                event.sender.send(
-                    'nova-document-progress',
-                    {
-                        stage: 'embedding',
-                        message:
-                            `Generando embeddings (${i + 1}/${chunks.length})...`
-                    }
-                );
-            }
-
-            console.log(
-                'DOCUMENTO COMPLETAMENTE INDEXADO'
-            );
-
-            event.sender.send(
-                'nova-document-progress',
-                {
-                    stage: 'complete',
-                    message:
-                        'Documento listo.'
-                }
-            );
-
-
-            return {
-                success: true,
-                conversationId,
-                document: {
-                    id: documentId,
-                    name: document.name,
-                    extension: document.extension,
-                    characters: document.characters,
-                    chunks: chunks.length
-                }
-            };
-
-
-        } catch (error) {
-
-            console.error(
-                'ERROR AL IMPORTAR DOCUMENTO:',
-                error
-            );
-
-            event.sender.send(
-                'nova-document-progress',
-                {
-                    stage: 'error',
-                    message:
-                        error.message
-                }
-            );
-
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
-);
-
 ipcMain.on('nova-stop', () => {
     if (currentAbortController) {
         currentAbortController.abort();
@@ -506,115 +261,6 @@ ipcMain.on('nova-stop', () => {
         console.log('Cancelación solicitada.');
     }
 });
-
-ipcMain.handle(
-    'nova-get-conversation-documents',
-    async (event, conversationId) => {
-        try {
-            if (!conversationId) {
-                return [];
-            }
-
-            const documents =
-                conversationDocumentsRepository
-                    .getDocumentsByConversationId(
-                        conversationId
-                    );
-
-            return documents;
-        } catch (error) {
-            console.error(
-                'ERROR AL OBTENER DOCUMENTOS DE LA CONVERSACIÓN:',
-                error
-            );
-
-            throw error;
-        }
-    }
-);
-
-ipcMain.handle(
-    'nova-remove-document-from-conversation',
-    async (event, data) => {
-        try {
-            const {
-                conversationId,
-                documentId
-            } = data;
-
-            if (!conversationId || !documentId) {
-                throw new Error(
-                    'conversationId y documentId son obligatorios.'
-                );
-            }
-
-            const result =
-                conversationDocumentsRepository
-                    .removeDocumentFromConversation(
-                        conversationId,
-                        documentId
-                    );
-
-            console.log(
-                'DOCUMENTO QUITADO DE LA CONVERSACIÓN:',
-                conversationId,
-                documentId
-            );
-
-            return {
-                success: true,
-                changes: result.changes
-            };
-        } catch (error) {
-            console.error(
-                'ERROR AL QUITAR DOCUMENTO:',
-                error
-            );
-
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
-);
-
-ipcMain.handle(
-    'nova-delete-document',
-    (event, documentId) => {
-
-        try {
-
-            const result =
-                documentsRepository
-                    .deleteDocumentCompletely(
-                        documentId
-                    );
-
-            console.log(
-                'DOCUMENTO ELIMINADO DE NOVA:',
-                documentId
-            );
-
-            return {
-                success: true,
-                deleted: result.changes > 0
-            };
-
-        } catch (error) {
-
-            console.error(
-                'ERROR AL ELIMINAR DOCUMENTO DE NOVA:',
-                error
-            );
-
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
-);
 
 app.whenReady().then(() => {
 
@@ -630,6 +276,12 @@ app.whenReady().then(() => {
 
     registerMemoryHandlers(
         ipcMain
+    );
+
+    registerDocumentHandlers(
+        ipcMain,
+        dialog,
+        () => mainWindow
     );
 
     createWindow();
