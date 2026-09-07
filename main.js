@@ -33,23 +33,13 @@ const memoriesRepository =
 let mainWindow;
 let currentAbortController = null;
 
-function ensureCurrentConversation(title = 'Nueva conversación') {
-    const currentId = session.getCurrentConversation();
+const {
+    ensureCurrentConversation
+} = require('./src/ipc/conversationState');
 
-    if (currentId && conversations.getConversation(currentId)) {
-        return currentId;
-    }
-
-    const safeTitle = typeof title === 'string' && title.trim()
-        ? title.trim().slice(0, 40)
-        : 'Nueva conversación';
-
-    const conversationId = conversations.createConversation(safeTitle);
-
-    session.setCurrentConversation(conversationId);
-
-    return conversationId;
-}
+const {
+    registerConversationHandlers
+} = require('./src/ipc/conversationHandlers');
 
 function getBubblePosition() {
     const display = screen.getPrimaryDisplay();
@@ -272,42 +262,6 @@ ipcMain.handle('nova-message', async (event, message) => {
             currentAbortController = null;
         }
     }
-});
-
-ipcMain.handle('nova-ensure-conversation', (event, title) => {
-    try {
-        return {
-            success: true,
-            conversationId: ensureCurrentConversation(title)
-        };
-    } catch (error) {
-        console.error('Error al preparar la conversación:', error);
-
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-});
-
-ipcMain.handle('nova-new-conversation', () => {
-
-    const conversationId =
-        conversations.createConversation(
-            'Nueva conversación'
-        );
-
-    session.setCurrentConversation(conversationId);
-
-    console.log(
-        'Nueva conversación creada:',
-        conversationId
-    );
-
-    return {
-        success: true,
-        conversationId
-    };
 });
 
 /* Importar documento */
@@ -538,13 +492,6 @@ ipcMain.handle(
     }
 );
 
-/* Obtener conversaciones */
-ipcMain.handle('nova-get-conversations', () => {
-
-    return conversations.getAllConversations();
-
-});
-
 /* Obtener modelos de Ollama */
 ipcMain.handle('nova-get-models', async () => {
 
@@ -719,78 +666,6 @@ ipcMain.handle('nova-get-context-size', async () => {
 
         return '8192';
     }
-});
-
-/* Obtener mensajes de una conversación */
-ipcMain.handle('nova-get-messages', (event, conversationId) => {
-
-    return messages.getMessages(conversationId);
-
-});
-
-/* Seleccionar conversación actual */
-ipcMain.handle('nova-select-conversation', (event, conversationId) => {
-
-    if (!conversations.getConversation(conversationId)) {
-        return {
-            success: false,
-            error: 'La conversación ya no existe.'
-        };
-    }
-
-    session.setCurrentConversation(conversationId);
-
-    console.log(
-        'Conversación seleccionada:',
-        conversationId
-    );
-
-    return {
-        success: true
-    };
-
-});
-
-/* Eliminar conversación */
-ipcMain.handle('nova-delete-conversation', (event, conversationId) => {
-
-    conversations.deleteConversation(conversationId);
-
-    if (
-        session.getCurrentConversation() === conversationId
-    ) {
-        session.clearCurrentConversation();
-    }
-
-    console.log(
-        'Conversación eliminada:',
-        conversationId
-    );
-
-    return {
-        success: true
-    };
-
-});
-
-/* Renombrar conversación */
-ipcMain.handle('nova-rename-conversation', (event, conversationId, title) => {
-
-    conversations.renameConversation(
-        conversationId,
-        title
-    );
-
-    console.log(
-        'Conversación renombrada:',
-        conversationId,
-        title
-    );
-
-    return {
-        success: true
-    };
-
 });
 
 ipcMain.on('nova-stop', () => {
@@ -1079,11 +954,19 @@ app.whenReady().then(() => {
 
     migrations.initializeDatabase();
 
+    registerConversationHandlers(
+        ipcMain
+    );
+
     createWindow();
 
     app.on('activate', () => {
 
-        if (BrowserWindow.getAllWindows().length === 0) {
+        if (
+            BrowserWindow
+                .getAllWindows()
+                .length === 0
+        ) {
             createWindow();
         }
 
