@@ -253,7 +253,10 @@ async function sendMessage() {
     }
 
     isGenerating = true;
+
     let acceptingChunks = true;
+    let streamedContent = '';
+    let renderTimer = null;
 
     try {
         const userMessage = document.createElement('div');
@@ -273,11 +276,32 @@ async function sendMessage() {
 
         messages.scrollTop = messages.scrollHeight;
 
-        window.nova.onStream((data) => {
-            if (!acceptingChunks) return;
+        let streamedContent = '';
+        let renderTimer = null;
 
-            novaMessage.textContent += data.chunk;
-            messages.scrollTop = messages.scrollHeight;
+        window.nova.onStream((data) => {
+            if (!acceptingChunks) {
+                return;
+            }
+
+            streamedContent += data.chunk;
+
+            if (renderTimer) {
+                return;
+            }
+
+            renderTimer = setTimeout(() => {
+                renderTimer = null;
+
+                window.novaResponseRenderer
+                    .renderAssistantMessage(
+                        novaMessage,
+                        streamedContent
+                    );
+
+                messages.scrollTop =
+                    messages.scrollHeight;
+            }, 80);
         });
 
         try {
@@ -290,8 +314,11 @@ async function sendMessage() {
             const result = await window.nova.sendMessage(text);
 
             if (result.success || result.stopped) {
-                // Mostrar exactamente el contenido guardado.
-                novaMessage.textContent = result.response;
+                window.novaResponseRenderer
+                    .renderAssistantMessage(
+                        novaMessage,
+                        result.response
+                    );
             } else {
                 novaMessage.textContent =
                     result.error || 'No se pudo procesar el mensaje.';
@@ -303,6 +330,12 @@ async function sendMessage() {
             console.error(error);
         }
     } finally {
+
+        if (renderTimer) {
+            clearTimeout(renderTimer);
+            renderTimer = null;
+        }
+
         acceptingChunks = false;
         isGenerating = false;
 
@@ -430,7 +463,17 @@ async function openConversation(conversationId) {
                 message.role === 'user' ? 'user-message' : 'nova-message'
             );
 
-            element.textContent = message.content;
+            if (message.role === 'user') {
+                element.textContent =
+                    message.content;
+            } else {
+                window.novaResponseRenderer
+                    .renderAssistantMessage(
+                        element,
+                        message.content
+                    );
+            }
+
             messages.appendChild(element);
         }
 

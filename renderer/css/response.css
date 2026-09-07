@@ -1,0 +1,190 @@
+.nova-message h1,
+.nova-message h2,
+.nova-message h3,
+.nova-message h4 {
+    margin: 0.6em 0 0.35em;
+    line-height: 1.2;
+}
+
+.nova-message h1 {
+    font-size: 1.7rem;
+}
+
+.nova-message h2 {
+    font-size: 1.35rem;
+}
+
+.nova-message h3 {
+    font-size: 1.15rem;
+}
+
+.nova-message p {
+    margin: 0.45em 0;
+    line-height: 1.55;
+}
+
+.nova-message ul,
+.nova-message ol {
+    margin: 0.45em 0;
+    padding-left: 1.4em;
+}
+
+.nova-message li {
+    margin: 0.2em 0;
+}
+
+.nova-message blockquote {
+    margin: 0.8em 0;
+    padding: 0.65em 0.9em;
+
+    border-left: 3px solid rgba(255, 255, 255, 0.35);
+    border-radius: 0 6px 6px 0;
+
+    background: rgba(255, 255, 255, 0.05);
+
+    opacity: 0.9;
+}
+
+.nova-message blockquote p {
+    margin: 0;
+}
+
+.nova-message code {
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+}
+
+.nova-message :not(pre) > code {
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.nova-message pre {
+    position: relative;
+    margin: 0.7em 0;
+    padding: 2.1em 0.9em 0.9em;
+    overflow-x: auto;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.28);
+}
+
+.nova-message pre code {
+    display: block;
+    white-space: pre;
+    line-height: 1.45;
+}
+
+.nova-message table {
+    width: 100%;
+    margin: 0.8em 0;
+
+    border-collapse: collapse;
+    border-radius: 8px;
+
+    font-size: 0.9em;
+}
+
+.nova-message th,
+.nova-message td {
+    padding: 0.5em 0.6em;
+
+    border: 1px solid rgba(255, 255, 255, 0.12);
+
+    text-align: left;
+    vertical-align: top;
+}
+
+.nova-message th {
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.nova-message tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.nova-message hr {
+    margin: 0.9em 0;
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.nova-message > :first-child {
+    margin-top: 0;
+}
+
+.nova-message > :last-child {
+    margin-bottom: 0;
+}
+
+.code-copy-button {
+    position: absolute;
+    top: 0.45em;
+    right: 0.55em;
+
+    border: 0;
+    border-radius: 5px;
+
+    padding: 0.3em 0.55em;
+
+    font-size: 0.78em;
+    cursor: pointer;
+
+    background: rgba(255, 255, 255, 0.1);
+    color: inherit;
+}
+
+.code-copy-button:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.code-language-label {
+    position: absolute;
+    top: 0.5em;
+    left: 0.7em;
+
+    font-size: 0.75em;
+    opacity: 0.65;
+
+    text-transform: uppercase;
+}
+
+.nova-message pre::-webkit-scrollbar {
+    height: 7px;
+}
+
+.nova-message pre::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+}
+
+.nova-message pre::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin: 0.8em 0;
+}
+
+.table-wrapper table {
+    margin: 0;
+    min-width: 100%;
+}
+
+.table-wrapper::-webkit-scrollbar {
+    height: 7px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
