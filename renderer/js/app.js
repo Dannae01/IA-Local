@@ -211,120 +211,97 @@ closeButton.addEventListener("click", () => {
 
 /* Enviar mensaje */
 
+let isGenerating = false;
+
 async function sendMessage() {
+    if (isGenerating) {
+        return;
+    }
 
     const text = input.value.trim();
 
-    if (text === "") {
+    if (text === '') {
         return;
     }
 
-    // Mostrar mensaje del usuario
-    const userMessage = document.createElement("div");
+    isGenerating = true;
+    let acceptingChunks = true;
 
-    userMessage.classList.add("message");
-    userMessage.textContent = text;
+    try {
+        const userMessage = document.createElement('div');
+        userMessage.classList.add('message', 'user-message');
+        userMessage.textContent = text;
+        messages.appendChild(userMessage);
 
-    messages.appendChild(userMessage);
+        input.value = '';
 
-    input.value = "";
+        const novaMessage = document.createElement('div');
+        novaMessage.classList.add('message', 'nova-message');
+        messages.appendChild(novaMessage);
 
-    messages.scrollTop = messages.scrollHeight;
-
-
-    // Crear mensaje de NOVA
-    const novaMessage = document.createElement("div");
-
-    novaMessage.classList.add(
-        "message",
-        "nova-message"
-    );
-
-    novaMessage.textContent = "";
-
-    messages.appendChild(novaMessage);
-
-    messages.scrollTop = messages.scrollHeight;
-
-
-    // Cambiar botón a "Detener"
-    sendButton.textContent = "■";
-    sendButton.classList.add("stop-button");
-
-
-    // Recibir streaming de NOVA
-    window.nova.onStream((data) => {
-
-        novaMessage.textContent += data.chunk;
+        sendButton.textContent = '■';
+        sendButton.classList.add('stop-button');
+        sendButton.disabled = false;
 
         messages.scrollTop = messages.scrollHeight;
 
-    });
+        window.nova.onStream((data) => {
+            if (!acceptingChunks) return;
 
+            novaMessage.textContent += data.chunk;
+            messages.scrollTop = messages.scrollHeight;
+        });
 
-    try {
+        try {
+            const result = await window.nova.sendMessage(text);
 
-        const result = await window.nova.sendMessage(text);
-
-        if (!result.success) {
-
-            if (result.stopped) {
-
-                novaMessage.textContent +=
-                    "\n\n[Generación detenida]";
-
+            if (result.success || result.stopped) {
+                // Mostrar exactamente el contenido guardado.
+                novaMessage.textContent = result.response;
             } else {
-
                 novaMessage.textContent =
-                    "No pude conectarme con Ollama.\n\n" +
-                    result.error;
-
+                    result.error || 'No se pudo procesar el mensaje.';
             }
+        } catch (error) {
+            novaMessage.textContent =
+                'Ocurrió un error al procesar el mensaje.';
 
+            console.error(error);
         }
+    } finally {
+        acceptingChunks = false;
+        isGenerating = false;
 
-    } catch (error) {
+        sendButton.textContent = '↑';
+        sendButton.classList.remove('stop-button');
+        sendButton.disabled = false;
 
-        novaMessage.textContent =
-            "Ocurrió un error al procesar el mensaje.";
-
-        console.error(error);
-
+        messages.scrollTop = messages.scrollHeight;
+        input.focus();
     }
-
-
-    // Restaurar botón
-    sendButton.textContent = "↑";
-    sendButton.classList.remove("stop-button");
-
-    messages.scrollTop = messages.scrollHeight;
 }
 
-/* Botón enviar */
+/* Botón enviar / detener */
 
-sendButton.addEventListener("click", () => {
-
-    if (sendButton.classList.contains("stop-button")) {
+sendButton.addEventListener('click', () => {
+    if (isGenerating) {
+        sendButton.disabled = true;
+        sendButton.textContent = '…';
 
         window.nova.stop();
-
         return;
-
     }
 
     sendMessage();
-
 });
-
 
 /* Enter para enviar */
 
-input.addEventListener("keydown", (event) => {
-
-    if (event.key === "Enter") {
+input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.isComposing) {
+        event.preventDefault();
         sendMessage();
     }
-
 });
 
 /* Nueva conversación */

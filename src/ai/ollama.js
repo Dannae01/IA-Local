@@ -3,21 +3,13 @@ const OLLAMA_URL = 'http://localhost:11434';
 async function checkConnection() {
     try {
         const response = await fetch(`${OLLAMA_URL}/api/tags`);
-
-        if (!response.ok) {
-            return false;
-        }
-
-        return true;
-
+        return response.ok;
     } catch (error) {
         return false;
     }
 }
 
-
 async function getModels() {
-
     const response = await fetch(`${OLLAMA_URL}/api/tags`);
 
     if (!response.ok) {
@@ -25,22 +17,21 @@ async function getModels() {
     }
 
     const data = await response.json();
-
     return data.models || [];
 }
 
-
-async function chat(model, messages, onChunk, signal, temperature, contextSize) {
-
-    console.log('TEMPERATURA ENVIADA A OLLAMA:', temperature);
-
-    console.log(
-        'PARÁMETROS ENVIADOS A OLLAMA:',
-        {
-            temperature,
-            contextSize
-        }
-    );
+async function chat(
+    model,
+    messages,
+    onChunk,
+    signal,
+    temperature,
+    contextSize
+) {
+    console.log('PARÁMETROS ENVIADOS A OLLAMA:', {
+        temperature,
+        contextSize
+    });
 
     const response = await fetch(`${OLLAMA_URL}/api/chat`, {
 
@@ -78,38 +69,59 @@ async function chat(model, messages, onChunk, signal, temperature, contextSize) 
 
     let fullResponse = '';
 
-    while (true) {
+    let buffer = '';
 
-        const { value, done } = await reader.read();
-
-        if (done) {
-            break;
+    function processLine(line) {
+        if (!line.trim()) {
+            return;
         }
 
-        const chunk = decoder.decode(value, {
-            stream: true
-        });
+        const data = JSON.parse(line);
 
-        const lines = chunk
-            .split('\n')
-            .filter(line => line.trim() !== '');
+        if (data.error) {
+            throw new Error(
+                `Ollama respondió con un error: ${data.error}`
+            );
+        }
 
-        for (const line of lines) {
+        const content = data.message?.content || '';
 
-            const data = JSON.parse(line);
+        if (content) {
+            fullResponse += content;
 
-            const content = data.message?.content || '';
-
-            if (content) {
-
-                fullResponse += content;
-
-                if (onChunk) {
-                    onChunk(content);
-                }
-
+            if (onChunk) {
+                onChunk(content);
             }
         }
+    }
+
+    try {
+        while (true) {
+            const { value, done } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            // Conservar el texto incompleto entre lecturas.
+            buffer += decoder.decode(value, { stream: true });
+
+            let newlineIndex;
+
+            // Procesar únicamente las líneas completas.
+            while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+                const line = buffer.slice(0, newlineIndex);
+                buffer = buffer.slice(newlineIndex + 1);
+
+                processLine(line);
+            }
+        }
+
+        // Procesar la última línea aunque no tenga salto de línea.
+        buffer += decoder.decode();
+        processLine(buffer);
+    } finally {
+        reader.releaseLock();
     }
 
     return fullResponse;

@@ -122,67 +122,82 @@ ipcMain.on('nova-close', () => {
 });
 
 ipcMain.handle('nova-message', async (event, message) => {
+    if (currentAbortController) {
+        return {
+            success: false,
+            busy: true,
+            error: 'Espera a que termine la generación actual.'
+        };
+    }
+
+    if (typeof message !== 'string' || !message.trim()) {
+        return {
+            success: false,
+            error: 'El mensaje está vacío.'
+        };
+    }
+
+    const controller = new AbortController();
+    currentAbortController = controller;
+
+    let conversationId = null;
+    let userMessageSaved = false;
+    let partialResponse = '';
+
+    const streamId = Date.now().toString();
 
     try {
-
         const model =
-            settings.getSetting('selected_model') ||
-            'qwen2.5:14b';
+            settings.getSetting('selected_model') || 'qwen2.5:14b';
 
-        const temperature =
-            parseFloat(
-                settings.getSetting('temperature') || '0.7'
-            );
+        const temperature = parseFloat(
+            settings.getSetting('temperature') || '0.7'
+        );
 
-        const contextSize =
-            parseInt(
-                settings.getSetting('context_size') || '8192',
-                10
-            );
+        const contextSize = parseInt(
+            settings.getSetting('context_size') || '8192',
+            10
+        );
 
-        let conversationId = session.getCurrentConversation();
+        conversationId = session.getCurrentConversation();
 
         if (!conversationId) {
-
             conversationId = conversations.createConversation(
                 message.slice(0, 40)
             );
 
             session.setCurrentConversation(conversationId);
-
-            console.log(
-                'Nueva conversación creada:',
-                conversationId
-            );
-
         }
 
-        messages.createMessage(
-            conversationId,
-            'user',
-            message
-        );
+        messages.createMessage(conversationId, 'user', message);
+        userMessageSaved = true;
 
         conversations.updateConversationTimestamp(conversationId);
-
-        currentAbortController = new AbortController();
-
-        const streamId = Date.now().toString();
 
         const response = await novaCore.processMessage(
             message,
             model,
             (chunk) => {
-                event.sender.send('nova-stream', {
-                    id: streamId,
-                    chunk: chunk
-                });
+                if (controller.signal.aborted) {
+                    return;
+                }
+
+                partialResponse += chunk;
+
+                if (!event.sender.isDestroyed()) {
+                    event.sender.send('nova-stream', {
+                        id: streamId,
+                        chunk
+                    });
+                }
             },
-            currentAbortController.signal,
+            controller.signal,
             conversationId,
             temperature,
             contextSize
         );
+
+        controller.signal.throwIfAborted();
 
         messages.createMessage(
             conversationId,
@@ -192,25 +207,48 @@ ipcMain.handle('nova-message', async (event, message) => {
 
         conversations.updateConversationTimestamp(conversationId);
 
-        currentAbortController = null;
-
         return {
             success: true,
             response,
-            id: streamId
+            id: streamId,
+            conversationId
         };
-
     } catch (error) {
+        if (controller.signal.aborted || error.name === 'AbortError') {
+            const stoppedResponse = partialResponse +
+                '\n\n[Generación detenida por el usuario; esta solicitud fue cancelada.]';
 
-        currentAbortController = null;
+            try {
+                if (userMessageSaved) {
+                    messages.createMessage(
+                        conversationId,
+                        'assistant',
+                        stoppedResponse
+                    );
 
-        if (error.name === 'AbortError') {
+                    conversations.updateConversationTimestamp(
+                        conversationId
+                    );
+                }
+            } catch (saveError) {
+                console.error(
+                    'Error al guardar la respuesta interrumpida:',
+                    saveError
+                );
+
+                return {
+                    success: false,
+                    error: 'La generación se detuvo, pero no se pudo guardar la respuesta parcial.'
+                };
+            }
 
             return {
                 success: false,
-                stopped: true
+                stopped: true,
+                response: stoppedResponse,
+                id: streamId,
+                conversationId
             };
-
         }
 
         console.error('Error de NOVA:', error);
@@ -219,9 +257,11 @@ ipcMain.handle('nova-message', async (event, message) => {
             success: false,
             error: error.message
         };
-
+    } finally {
+        if (currentAbortController === controller) {
+            currentAbortController = null;
+        }
     }
-
 });
 
 ipcMain.handle('nova-new-conversation', () => {
@@ -727,17 +767,11 @@ ipcMain.handle('nova-rename-conversation', (event, conversationId, title) => {
 });
 
 ipcMain.on('nova-stop', () => {
-
     if (currentAbortController) {
-
         currentAbortController.abort();
 
-        currentAbortController = null;
-
-        console.log('Generación detenida.');
-
+        console.log('Cancelación solicitada.');
     }
-
 });
 
 ipcMain.handle(
