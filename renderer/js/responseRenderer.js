@@ -127,8 +127,44 @@ function enhanceTables(element) {
     });
 }
 
+function renderImage(
+    element,
+    image
+) {
+    if (
+        !image ||
+        typeof image.dataUrl !== 'string'
+    ) {
+        return;
+    }
 
+    const container =
+        document.createElement('div');
+
+    container.className =
+        'nova-image-container';
+
+    const img =
+        document.createElement('img');
+
+    img.className =
+        'nova-chat-image';
+
+    img.src =
+        image.dataUrl;
+
+    img.alt =
+        image.name || 'Imagen';
+
+    img.loading =
+        'lazy';
+
+    container.appendChild(img);
+
+    element.appendChild(container);
+}
 
 window.novaResponseRenderer = {
-    renderAssistantMessage
+    renderAssistantMessage,
+    renderImage
 };

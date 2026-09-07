@@ -167,6 +167,12 @@ contextBridge.exposeInMainWorld('nova', {
         );
     },
 
+    importAttachment: () => {
+        return ipcRenderer.invoke(
+            'nova-import-attachment'
+        );
+    },
+
     getConversationDocuments: (conversationId) =>
         ipcRenderer.invoke(
             'nova-get-conversation-documents',

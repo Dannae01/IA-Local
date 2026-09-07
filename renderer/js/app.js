@@ -474,6 +474,28 @@ async function openConversation(conversationId) {
                     );
             }
 
+            if (
+                Array.isArray(
+                    message.attachments
+                )
+            ) {
+                for (
+                    const attachment
+                    of message.attachments
+                ) {
+                    if (
+                        attachment.type ===
+                        'image'
+                    ) {
+                        window.novaResponseRenderer
+                            .renderImage(
+                                element,
+                                attachment
+                            );
+                    }
+                }
+            }
+
             messages.appendChild(element);
         }
 
@@ -1055,41 +1077,105 @@ loadModels().then(() => {
 // IMPORTAR DOCUMENTOS
 // =============================
 
-importDocumentButton.addEventListener('click', async () => {
-    if (isGenerating || isImporting || isChangingConversation) {
-        return;
-    }
+importDocumentButton.addEventListener(
+    'click',
+    async () => {
 
-    isImporting = true;
-    importDocumentButton.disabled = true;
-    sendButton.disabled = true;
-
-    try {
-        const result = await window.nova.importDocument();
-
-        if (result.canceled) {
+        if (
+            isGenerating ||
+            isImporting ||
+            isChangingConversation
+        ) {
             return;
         }
 
-        if (!result.success) {
-            throw new Error(
-                result.error || 'No se pudo importar el documento.'
+        isImporting = true;
+
+        importDocumentButton.disabled =
+            true;
+
+        sendButton.disabled =
+            true;
+
+        try {
+            const result =
+                await window.nova
+                    .importAttachment();
+
+            if (result.canceled) {
+                return;
+            }
+
+            if (!result.success) {
+                throw new Error(
+                    result.error ||
+                    'No se pudo adjuntar el archivo.'
+                );
+            }
+
+            if (
+                result.type ===
+                'document'
+            ) {
+                currentConversationId =
+                    result.conversationId;
+
+                await loadConversationDocuments();
+                await loadConversations();
+
+                return;
+            }
+
+            if (result.type === 'image') {
+                currentConversationId =
+                    result.conversationId;
+
+                const imageMessage =
+                    document.createElement(
+                        'div'
+                    );
+
+                imageMessage.classList.add(
+                    'message',
+                    'user-message',
+                    'image-message'
+                );
+
+                window.novaResponseRenderer
+                    .renderImage(
+                        imageMessage,
+                        result.image
+                    );
+
+                messages.appendChild(
+                    imageMessage
+                );
+
+                messages.scrollTop =
+                    messages.scrollHeight;
+
+                await loadConversations();
+            }
+
+        } catch (error) {
+            console.error(
+                'ERROR AL ADJUNTAR ARCHIVO:',
+                error
             );
+
+            alert(error.message);
+
+        } finally {
+            isImporting = false;
+
+            importDocumentButton.disabled =
+                false;
+
+            sendButton.disabled =
+                false;
         }
-
-        currentConversationId = result.conversationId;
-
-        await loadConversationDocuments();
-        await loadConversations();
-    } catch (error) {
-        console.error('ERROR AL IMPORTAR DOCUMENTO:', error);
-        alert(error.message);
-    } finally {
-        isImporting = false;
-        importDocumentButton.disabled = false;
-        sendButton.disabled = false;
     }
-});
+);
 
 
 // Progreso de importación

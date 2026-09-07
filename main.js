@@ -11,8 +11,6 @@ const {
     registerDocumentHandlers
 } = require('./src/ipc/documentHandlers');
 
-let mainWindow;
-
 const {
     registerConversationHandlers
 } = require('./src/ipc/conversationHandlers');
@@ -28,6 +26,12 @@ const {
 const {
     registerWindowHandlers
 } = require('./src/ipc/windowHandlers');
+
+const {
+    registerAttachmentHandlers
+} = require('./src/ipc/attachmentHandlers');
+
+let mainWindow;
 
 function getBubblePosition() {
     const display = screen.getPrimaryDisplay();
@@ -102,6 +106,12 @@ app.whenReady().then(() => {
     );
 
     registerDocumentHandlers(
+        ipcMain,
+        dialog,
+        () => mainWindow
+    );
+
+    registerAttachmentHandlers(
         ipcMain,
         dialog,
         () => mainWindow

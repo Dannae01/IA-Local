@@ -11,6 +11,9 @@ const {
     ensureCurrentConversation
 } = require('./conversationState');
 
+const fs = require('fs');
+const path = require('path');
+
 function registerConversationHandlers(
     ipcMain
 ) {
@@ -86,9 +89,13 @@ function registerConversationHandlers(
         'nova-get-messages',
         (event, conversationId) => {
 
-            return messages.getMessages(
-                conversationId
-            );
+            return messages
+                .getMessages(
+                    conversationId
+                )
+                .map(
+                    hydrateAttachments
+                );
 
         }
     );
@@ -173,6 +180,56 @@ function registerConversationHandlers(
             };
         }
     );
+}
+
+function hydrateAttachments(
+    message
+) {
+    if (
+        !Array.isArray(
+            message.attachments
+        )
+    ) {
+        return message;
+    }
+
+    const attachments =
+        message.attachments.map(
+            (attachment) => {
+
+                if (
+                    attachment.type !==
+                    'image'
+                ) {
+                    return attachment;
+                }
+
+                const buffer =
+                    fs.readFileSync(
+                        attachment.path
+                    );
+
+                const dataUrl =
+                    `data:${attachment.mime_type};base64,${buffer.toString('base64')}`;
+
+                return {
+                    id:
+                        attachment.id,
+                    type:
+                        attachment.type,
+                    name:
+                        attachment.name,
+                    mimeType:
+                        attachment.mime_type,
+                    dataUrl
+                };
+            }
+        );
+
+    return {
+        ...message,
+        attachments
+    };
 }
 
 module.exports = {
