@@ -1,4 +1,13 @@
-const { app, BrowserWindow, screen, ipcMain, dialog } = require('electron');
+const {
+    app,
+    BrowserWindow,
+    screen,
+    ipcMain,
+    dialog,
+    Tray,
+    Menu
+} = require('electron');
+
 const path = require('path');
 
 const migrations = require('./src/database/migrations');
@@ -32,78 +41,251 @@ const {
 } = require('./src/ipc/attachmentHandlers');
 
 let mainWindow;
+let tray;
+let isQuitting = false;
+
 
 function getBubblePosition() {
-    const display = screen.getPrimaryDisplay();
-    const workArea = display.workArea;
+    const display =
+        screen.getPrimaryDisplay();
+
+    const workArea =
+        display.workArea;
 
     const width = 24;
     const height = 24;
     const margin = 16;
 
     return {
-        x: workArea.x + workArea.width - width - margin,
-        y: workArea.y + workArea.height - height - margin
+        x:
+            workArea.x +
+            workArea.width -
+            width -
+            margin,
+
+        y:
+            workArea.y +
+            workArea.height -
+            height -
+            margin
     };
 }
 
+
 function getChatPosition() {
-    const display = screen.getPrimaryDisplay();
-    const workArea = display.workArea;
+    const display =
+        screen.getPrimaryDisplay();
+
+    const workArea =
+        display.workArea;
 
     const width = 400;
     const height = 600;
     const margin = 20;
 
     return {
-        x: workArea.x + workArea.width - width - margin,
-        y: workArea.y + workArea.height - height - margin
+        x:
+            workArea.x +
+            workArea.width -
+            width -
+            margin,
+
+        y:
+            workArea.y +
+            workArea.height -
+            height -
+            margin
     };
 }
 
+
 function createWindow() {
 
-    const position = getBubblePosition();
+    const position =
+        getBubblePosition();
 
-    mainWindow = new BrowserWindow({
-        width: 24,
-        height: 24,
+    mainWindow =
+        new BrowserWindow({
+            width: 24,
+            height: 24,
 
-        x: position.x,
-        y: position.y,
+            x:
+                position.x,
 
-        frame: false,
-        transparent: true,
-        resizable: false,
-        alwaysOnTop: true,
+            y:
+                position.y,
 
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false
-        }
-    });
+            frame: false,
+            transparent: true,
+            resizable: false,
+            alwaysOnTop: true,
+
+            /*
+             * Evita que NOVA aparezca
+             * en la barra de tareas.
+             */
+            skipTaskbar: true,
+
+            webPreferences: {
+                preload:
+                    path.join(
+                        __dirname,
+                        'preload.js'
+                    ),
+
+                contextIsolation: true,
+                nodeIntegration: false
+            }
+        });
+
 
     mainWindow.loadFile(
-        path.join(__dirname, 'renderer', 'index.html')
+        path.join(
+            __dirname,
+            'renderer',
+            'index.html'
+        )
+    );
+
+    mainWindow.on(
+        'close',
+        (event) => {
+
+            if (!isQuitting) {
+                event.preventDefault();
+
+                mainWindow.hide();
+            }
+        }
     );
 }
 
+
+function showNova() {
+    if (!mainWindow) {
+        createWindow();
+    }
+
+    mainWindow.show();
+    mainWindow.focus();
+}
+
+
+function hideNova() {
+    if (mainWindow) {
+        mainWindow.hide();
+    }
+}
+
+
+function toggleNova() {
+    if (!mainWindow) {
+        showNova();
+        return;
+    }
+
+    if (
+        mainWindow.isVisible()
+    ) {
+        hideNova();
+    } else {
+        showNova();
+    }
+}
+
+
+function createTray() {
+
+    const trayIcon =
+        path.join(
+            __dirname,
+            'assets',
+            'icons',
+            'settings.png'
+        );
+
+
+    tray =
+        new Tray(
+            trayIcon
+        );
+
+
+    const contextMenu =
+        Menu.buildFromTemplate([
+            {
+                label:
+                    'Abrir NOVA',
+
+                click: () => {
+                    showNova();
+                }
+            },
+
+            {
+                label:
+                    'Ocultar NOVA',
+
+                click: () => {
+                    hideNova();
+                }
+            },
+
+            {
+                type:
+                    'separator'
+            },
+
+            {
+                label:
+                    'Salir',
+
+                click: () => {
+                    isQuitting = true;
+                    app.quit();
+                }
+            }
+        ]);
+
+
+    tray.setToolTip(
+        'NOVA'
+    );
+
+
+    tray.setContextMenu(
+        contextMenu
+    );
+
+    tray.on(
+        'click',
+        () => {
+            toggleNova();
+        }
+    );
+}
+
+
 app.whenReady().then(() => {
 
-    migrations.initializeDatabase();
+    migrations
+        .initializeDatabase();
+
 
     registerConversationHandlers(
         ipcMain
     );
 
+
     registerSettingsHandlers(
         ipcMain
     );
 
+
     registerMemoryHandlers(
         ipcMain
     );
+
 
     registerDocumentHandlers(
         ipcMain,
@@ -111,15 +293,18 @@ app.whenReady().then(() => {
         () => mainWindow
     );
 
+
     registerAttachmentHandlers(
         ipcMain,
         dialog,
         () => mainWindow
     );
 
+
     registerChatHandlers(
         ipcMain
     );
+
 
     registerWindowHandlers(
         ipcMain,
@@ -128,27 +313,41 @@ app.whenReady().then(() => {
         getChatPosition
     );
 
+
     createWindow();
 
-    app.on('activate', () => {
+    createTray();
 
-        if (
-            BrowserWindow
-                .getAllWindows()
-                .length === 0
-        ) {
-            createWindow();
+
+    app.on(
+        'activate',
+        () => {
+
+            if (
+                BrowserWindow
+                    .getAllWindows()
+                    .length === 0
+            ) {
+                createWindow();
+            }
+
+            showNova();
         }
-
-    });
-
+    );
 });
 
 
-app.on('window-all-closed', () => {
-
-    if (process.platform !== 'darwin') {
-        app.quit();
+app.on(
+    'before-quit',
+    () => {
+        isQuitting = true;
     }
+);
 
-});
+
+app.on(
+    'window-all-closed',
+    () => {
+
+    }
+);
