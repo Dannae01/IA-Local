@@ -114,8 +114,17 @@ contextBridge.exposeInMainWorld('nova', {
         );
     },
 
-    sendMessage: (message) => {
-        return ipcRenderer.invoke('nova-message', message);
+    sendMessage: (
+        message,
+        attachments = []
+    ) => {
+        return ipcRenderer.invoke(
+            'nova-message',
+            {
+                message,
+                attachments
+            }
+        );
     },
 
     getModels: () => {
@@ -179,6 +188,15 @@ contextBridge.exposeInMainWorld('nova', {
         return ipcRenderer.invoke(
             'nova-delete-attachment',
             attachmentId
+        );
+    },
+
+    discardPendingAttachment: (
+        token
+    ) => {
+        return ipcRenderer.invoke(
+            'nova-discard-pending-attachment',
+            token
         );
     },
 

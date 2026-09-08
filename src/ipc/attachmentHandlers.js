@@ -34,6 +34,11 @@ const {
     deleteStoredAttachment
 } = require('./attachmentStorage');
 
+const {
+    stageAttachment,
+    discardAttachment
+} = require('./pendingAttachments');
+
 const IMAGE_TYPES = {
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
@@ -113,61 +118,34 @@ function registerAttachmentHandlers(
                         .toLowerCase();
 
                 if (IMAGE_TYPES[extension]) {
-                    const conversationId =
-                        ensureCurrentConversation(
-                            'Nueva conversación'
-                        );
-
                     const mimeType =
                         IMAGE_TYPES[extension];
 
-                    const storedPath =
-                        storeAttachment(
-                            filePath,
-                            conversationId
-                        );
-
-                    const messageId =
-                        messagesRepository
-                            .createMessage(
-                                conversationId,
-                                'user',
-                                ''
-                            );
-
-                    const attachmentId =
-                        attachmentsRepository
-                            .createAttachment(
-                                messageId,
-                                conversationId,
-                                'image',
-                                path.basename(filePath),
-                                storedPath,
-                                mimeType
-                            );
-
                     const buffer =
                         fs.readFileSync(
-                            storedPath
+                            filePath
                         );
 
-                    const dataUrl =
-                        `data:${mimeType};base64,${buffer.toString('base64')}`;
+                    const token =
+                        stageAttachment(
+                            filePath,
+                            path.basename(filePath),
+                            mimeType
+                        );
 
                     return {
                         success: true,
                         type: 'image',
-                        conversationId,
-                        messageId,
 
                         image: {
-                            id: attachmentId,
+                            token,
                             name:
                                 path.basename(
                                     filePath
                                 ),
                             mimeType,
-                            dataUrl
+                            dataUrl:
+                                `data:${mimeType};base64,${buffer.toString('base64')}`
                         }
                     };
                 }
@@ -367,6 +345,19 @@ function registerAttachmentHandlers(
             }
         }
     );
+
+    ipcMain.handle(
+        'nova-discard-pending-attachment',
+        (event, token) => {
+            return {
+                success:
+                    discardAttachment(
+                        token
+                    )
+            };
+        }
+    );
+
 }
 
 module.exports = {

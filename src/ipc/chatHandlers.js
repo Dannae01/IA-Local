@@ -1,3 +1,16 @@
+const fs = require('fs');
+
+const attachmentsRepository =
+    require('../database/repositories/attachments');
+
+const {
+    storeAttachment
+} = require('./attachmentStorage');
+
+const {
+    consumeAttachment
+} = require('./pendingAttachments');
+
 const novaCore =
     require('../core/app');
 
@@ -21,7 +34,19 @@ function registerChatHandlers(
 
     ipcMain.handle(
         'nova-message',
-        async (event, message) => {
+        async (event, payload) => {
+
+            const message =
+                typeof payload === 'string'
+                    ? payload
+                    : payload?.message;
+
+            const requestedAttachments =
+                Array.isArray(
+                    payload?.attachments
+                )
+                    ? payload.attachments
+                    : [];
 
             if (currentAbortController) {
                 return {
@@ -33,8 +58,11 @@ function registerChatHandlers(
             }
 
             if (
-                typeof message !== 'string' ||
-                !message.trim()
+                (
+                    typeof message !== 'string' ||
+                    !message.trim()
+                ) &&
+                requestedAttachments.length === 0
             ) {
                 return {
                     success: false,
@@ -58,11 +86,11 @@ function registerChatHandlers(
 
             try {
 
-                const model =
-                    settings.getSetting(
-                        'selected_model'
-                    ) ||
-                    'qwen2.5:14b';
+            const selectedModel =
+                settings.getSetting(
+                    'selected_model'
+                ) ||
+                'qwen2.5:14b';
 
                 const temperature =
                     parseFloat(
@@ -83,21 +111,74 @@ function registerChatHandlers(
 
                 conversationId =
                     ensureCurrentConversation(
+                        message?.trim() ||
+                        'Imagen adjunta'
+                    );
+
+                const userMessageId =
+                    messages.createMessage(
+                        conversationId,
+                        'user',
                         message
                     );
 
-                messages.createMessage(
-                    conversationId,
-                    'user',
-                    message
-                );
-
                 userMessageSaved = true;
 
-                conversations
-                    .updateConversationTimestamp(
-                        conversationId
+                const visionImages = [];
+
+                for (
+                    const requestedAttachment
+                    of requestedAttachments
+                ) {
+                    if (
+                        requestedAttachment.type !==
+                        'image' ||
+                        !requestedAttachment.token
+                    ) {
+                        continue;
+                    }
+
+                    const pendingAttachment =
+                        consumeAttachment(
+                            requestedAttachment.token
+                        );
+
+                    if (!pendingAttachment) {
+                        continue;
+                    }
+
+                    const storedPath =
+                        storeAttachment(
+                            pendingAttachment.filePath,
+                            conversationId
+                        );
+
+                    attachmentsRepository
+                        .createAttachment(
+                            userMessageId,
+                            conversationId,
+                            'image',
+                            pendingAttachment.name,
+                            storedPath,
+                            pendingAttachment.mimeType
+                        );
+
+                    const buffer =
+                        fs.readFileSync(
+                            storedPath
+                        );
+
+                    visionImages.push(
+                        buffer.toString(
+                            'base64'
+                        )
                     );
+                }
+
+                const model =
+                    visionImages.length > 0
+                        ? 'qwen3-vl:8b'
+                        : selectedModel;
 
                 const response =
                     await novaCore.processMessage(
@@ -133,7 +214,8 @@ function registerChatHandlers(
                         controller.signal,
                         conversationId,
                         temperature,
-                        contextSize
+                        contextSize,
+                        visionImages
                     );
 
                 controller

@@ -1,5 +1,8 @@
-const ollama = require('../ai/ollama');
-const messagesRepository = require('../database/repositories/messages');
+const ollama =
+    require('../ai/ollama');
+
+const messagesRepository =
+    require('../database/repositories/messages');
 
 const {
     searchSimilarChunks
@@ -14,6 +17,7 @@ const {
 const {
     detectMemoryCandidate
 } = require('../memory/memoryDetector');
+
 
 const SYSTEM_PROMPT = `
 Eres NOVA, un asistente virtual de escritorio local.
@@ -45,53 +49,84 @@ async function processMessage(
     signal,
     conversationId,
     temperature,
-    contextSize
+    contextSize,
+    images = []
 ) {
-    const history = conversationId
-        ? messagesRepository
-            .getMessages(conversationId)
-            .slice(0, -1)
-        : [];
+    const hasImages =
+        Array.isArray(images) &&
+        images.length > 0;
+
+    const visualPrompt =
+        hasImages
+            ? `
+También puedes analizar imágenes adjuntas.
+
+Cuando el usuario adjunte una imagen, analízala de forma clara y útil.
+
+Si contiene texto visible, puedes leerlo y resumirlo cuando sea posible.
+
+Si alguna parte de la imagen no es legible o no estás seguro de su contenido, indícalo claramente.
+`
+            : '';
+
+    const history =
+        conversationId
+            ? messagesRepository
+                .getMessages(
+                    conversationId
+                )
+                .slice(0, -1)
+            : [];
 
     const relevantChunks =
-        await searchSimilarChunks(
-            userMessage,
-            conversationId,
-            5
-        );
+        hasImages
+            ? []
+            : await searchSimilarChunks(
+                userMessage,
+                conversationId,
+                5
+            );
 
-    console.log('CHUNKS RELEVANTES:', relevantChunks);
+    console.log(
+        'CHUNKS RELEVANTES:',
+        relevantChunks
+    );
 
-    const memoryCandidate =
-        detectMemoryCandidate(
-            userMessage
-        );
+    if (!hasImages) {
+        const memoryCandidate =
+            detectMemoryCandidate(
+                userMessage
+            );
 
-    if (memoryCandidate) {
-        try {
-            const memoryResult =
-                await saveMemoryIfNew(
-                    memoryCandidate
-                );
+        if (memoryCandidate) {
+            try {
+                const memoryResult =
+                    await saveMemoryIfNew(
+                        memoryCandidate
+                    );
 
-            if (memoryResult.saved) {
-                console.log(
-                    `Nueva memoria guardada: ${memoryResult.id}`
+                if (memoryResult.saved) {
+                    console.log(
+                        `Nueva memoria guardada: ${memoryResult.id}`
+                    );
+                }
+
+            } catch (error) {
+                console.error(
+                    'ERROR AL GUARDAR MEMORIA AUTOMÁTICA:',
+                    error
                 );
             }
-        } catch (error) {
-            console.error(
-                'ERROR AL GUARDAR MEMORIA AUTOMÁTICA:',
-                error
-            );
         }
     }
 
-const relevantMemories =
-    await findRelevantMemories(
-        userMessage,
-        5
-    );
+    const relevantMemories =
+        hasImages
+            ? []
+            : await findRelevantMemories(
+                userMessage,
+                5
+            );
 
     console.log(
         `Memorias relevantes encontradas: ${relevantMemories.length}`
@@ -100,12 +135,12 @@ const relevantMemories =
     const memoryContext =
         relevantMemories.length > 0
             ? `
-    MEMORIAS RELEVANTES DEL USUARIO:
+MEMORIAS RELEVANTES DEL USUARIO:
 
-    ${formatMemoriesForPrompt(
-        relevantMemories
-    )}
-    `
+${formatMemoriesForPrompt(
+    relevantMemories
+)}
+`
             : '';
 
     const ragContext =
@@ -127,29 +162,70 @@ ${chunk.content}`
     const messages = [
         {
             role: 'system',
-            content: SYSTEM_PROMPT + memoryContext + ragContext
+            content:
+                SYSTEM_PROMPT +
+                visualPrompt +
+                memoryContext +
+                ragContext
         },
-        ...history.map((message) => ({
-            role: message.role,
-            content: message.content
-        })),
+
+        ...history.map(
+            (message) => ({
+                role:
+                    message.role,
+
+                content:
+                    message.content
+            })
+        ),
+
         {
             role: 'user',
-            content: userMessage
+
+            content:
+                userMessage?.trim() ||
+                'Describe esta imagen.',
+
+            ...(
+                hasImages
+                    ? {
+                        images
+                    }
+                    : {}
+            )
         }
     ];
 
-    console.log('HISTORIAL RECUPERADO:', history);
-    console.log('MENSAJES ENVIADOS A OLLAMA:', messages);
-
-    const response = await ollama.chat(
-        model,
-        messages,
-        onChunk,
-        signal,
-        temperature,
-        contextSize
+    console.log(
+        'HISTORIAL RECUPERADO:',
+        history
     );
+
+    console.log(
+        'CONTEXTO DE PETICIÓN:',
+        {
+            model,
+            hasImages,
+            imageCount:
+                images.length,
+            historyMessages:
+                history.length,
+            relevantChunks:
+                relevantChunks.length,
+            relevantMemories:
+                relevantMemories.length
+        }
+    );
+
+    const response =
+        await ollama.chat(
+            model,
+            messages,
+            onChunk,
+            signal,
+            temperature,
+            contextSize
+        );
 
     return response;
 }
