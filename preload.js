@@ -191,6 +191,15 @@ contextBridge.exposeInMainWorld('nova', {
         );
     },
 
+    stageClipboardImage: (
+        image
+    ) => {
+        return ipcRenderer.invoke(
+            'nova-stage-clipboard-image',
+            image
+        );
+    },
+
     discardPendingAttachment: (
         token
     ) => {

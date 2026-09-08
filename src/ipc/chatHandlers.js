@@ -163,6 +163,29 @@ function registerChatHandlers(
                             pendingAttachment.mimeType
                         );
 
+                    if (
+                        pendingAttachment.temporary
+                    ) {
+                        try {
+                            if (
+                                fs.existsSync(
+                                    pendingAttachment.filePath
+                                )
+                            ) {
+                                fs.unlinkSync(
+                                    pendingAttachment.filePath
+                                );
+                            }
+
+                        } catch (error) {
+
+                            console.error(
+                                'ERROR AL LIMPIAR IMAGEN TEMPORAL:',
+                                error
+                            );
+                        }
+                    }
+
                     const buffer =
                         fs.readFileSync(
                             storedPath

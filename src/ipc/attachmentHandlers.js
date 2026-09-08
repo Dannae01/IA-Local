@@ -358,6 +358,178 @@ function registerAttachmentHandlers(
         }
     );
 
+    ipcMain.handle(
+        'nova-stage-clipboard-image',
+        async (event, image) => {
+
+            try {
+
+                if (
+                    !image ||
+                    typeof image.dataUrl !==
+                        'string'
+                ) {
+                    throw new Error(
+                        'La imagen del portapapeles no es válida.'
+                    );
+                }
+
+
+                const allowedMimeTypes =
+                    new Set([
+                        'image/png',
+                        'image/jpeg',
+                        'image/webp',
+                        'image/gif'
+                    ]);
+
+
+                if (
+                    !allowedMimeTypes.has(
+                        image.mimeType
+                    )
+                ) {
+                    throw new Error(
+                        'El formato de imagen no está soportado.'
+                    );
+                }
+
+                const match =
+                    image.dataUrl.match(
+                        /^data:(image\/(?:png|jpeg|webp|gif));base64,(.+)$/
+                    );
+
+
+                if (!match) {
+                    throw new Error(
+                        'El contenido de la imagen no es válido.'
+                    );
+                }
+
+
+                const mimeType =
+                    match[1];
+
+                const buffer =
+                    Buffer.from(
+                        match[2],
+                        'base64'
+                    );
+
+                const MAX_IMAGE_SIZE =
+                    10 * 1024 * 1024;
+
+
+                if (
+                    buffer.length >
+                    MAX_IMAGE_SIZE
+                ) {
+                    throw new Error(
+                        'La imagen supera el límite de 10 MB.'
+                    );
+                }
+
+
+                const extensionMap = {
+                    'image/png':
+                        '.png',
+
+                    'image/jpeg':
+                        '.jpg',
+
+                    'image/webp':
+                        '.webp',
+
+                    'image/gif':
+                        '.gif'
+                };
+
+
+                const extension =
+                    extensionMap[
+                        mimeType
+                    ];
+
+                const pendingDirectory =
+                    path.join(
+                        __dirname,
+                        '../../data/pending'
+                    );
+
+
+                fs.mkdirSync(
+                    pendingDirectory,
+                    {
+                        recursive: true
+                    }
+                );
+
+
+                const fileName =
+                    `clipboard-${Date.now()}-${Math.random()
+                        .toString(36)
+                        .slice(2, 8)}${extension}`;
+
+
+                const temporaryPath =
+                    path.join(
+                        pendingDirectory,
+                        fileName
+                    );
+
+
+                fs.writeFileSync(
+                    temporaryPath,
+                    buffer
+                );
+
+
+                const token =
+                    stageAttachment(
+                        temporaryPath,
+                        image.name ||
+                            fileName,
+                        mimeType,
+                        {
+                            temporary: true
+                        }
+                    );
+
+
+                return {
+                    success: true,
+
+                    image: {
+                        token,
+
+                        name:
+                            image.name ||
+                            fileName,
+
+                        mimeType,
+
+                        dataUrl:
+                            image.dataUrl
+                    }
+                };
+
+            } catch (error) {
+
+                console.error(
+                    'ERROR AL PREPARAR IMAGEN DEL PORTAPAPELES:',
+                    error
+                );
+
+
+                return {
+                    success: false,
+                    error:
+                        error.message
+                };
+            }
+        }
+    );
+
 }
 
 module.exports = {

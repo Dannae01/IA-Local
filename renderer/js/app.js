@@ -589,6 +589,182 @@ input.addEventListener('keydown', (event) => {
     }
 });
 
+input.addEventListener(
+    'paste',
+    async (event) => {
+
+        if (
+            isGenerating ||
+            isImporting ||
+            isChangingConversation
+        ) {
+            return;
+        }
+
+
+        const clipboardItems =
+            event.clipboardData
+                ?.items;
+
+
+        if (!clipboardItems) {
+            return;
+        }
+
+
+        let imageItem =
+            null;
+
+        for (
+            const item
+            of clipboardItems
+        ) {
+            if (
+                item.kind === 'file' &&
+                item.type.startsWith(
+                    'image/'
+                )
+            ) {
+                imageItem =
+                    item;
+
+                break;
+            }
+        }
+
+
+        if (!imageItem) {
+            return;
+        }
+
+        event.preventDefault();
+
+
+        const file =
+            imageItem.getAsFile();
+
+
+        if (!file) {
+            return;
+        }
+
+
+        try {
+
+            const dataUrl =
+                await new Promise(
+                    (
+                        resolve,
+                        reject
+                    ) => {
+
+                        const reader =
+                            new FileReader();
+
+
+                        reader.onload =
+                            () => {
+                                resolve(
+                                    reader.result
+                                );
+                            };
+
+
+                        reader.onerror =
+                            () => {
+                                reject(
+                                    new Error(
+                                        'No se pudo leer la imagen del portapapeles.'
+                                    )
+                                );
+                            };
+
+
+                        reader.readAsDataURL(
+                            file
+                        );
+                    }
+                );
+
+            for (
+                const attachment
+                of pendingAttachments
+            ) {
+                if (
+                    attachment.token
+                ) {
+                    await window.nova
+                        .discardPendingAttachment(
+                            attachment.token
+                        );
+                }
+            }
+
+
+            const result =
+                await window.nova
+                    .stageClipboardImage(
+                        {
+                            name:
+                                `clipboard-${Date.now()}.png`,
+
+                            mimeType:
+                                file.type ||
+                                'image/png',
+
+                            dataUrl
+                        }
+                    );
+
+
+            if (!result?.success) {
+                throw new Error(
+                    result?.error ||
+                    'No se pudo pegar la imagen.'
+                );
+            }
+
+
+            pendingAttachments = [
+                {
+                    type:
+                        'image',
+
+                    token:
+                        result.image.token,
+
+                    name:
+                        result.image.name,
+
+                    mimeType:
+                        result.image.mimeType,
+
+                    dataUrl:
+                        result.image.dataUrl
+                }
+            ];
+
+
+            renderPendingAttachments();
+
+            input.focus();
+
+
+        } catch (error) {
+
+            console.error(
+                'ERROR AL PEGAR IMAGEN:',
+                error
+            );
+
+
+            alert(
+                error.message
+            );
+        }
+    }
+);
+
 /* Nueva conversación */
 async function createNewConversation() {
     if (isGenerating || isImporting || isChangingConversation) {
