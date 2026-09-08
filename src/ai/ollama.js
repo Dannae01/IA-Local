@@ -28,9 +28,16 @@ async function chat(
     temperature,
     contextSize
 ) {
-    console.log('PARÁMETROS ENVIADOS A OLLAMA:', {
+    console.log('PETICIÓN A OLLAMA:', {
+        model,
         temperature,
-        contextSize
+        contextSize,
+        messageCount: messages.length,
+        hasImages: messages.some(
+            (message) =>
+                Array.isArray(message.images) &&
+                message.images.length > 0
+        )
     });
 
     const response = await fetch(`${OLLAMA_URL}/api/chat`, {

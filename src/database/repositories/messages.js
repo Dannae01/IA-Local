@@ -1,5 +1,7 @@
 const db = require('../database');
 
+const attachmentsRepository =
+    require('./attachments');
 
 function createMessage(conversationId, role, content) {
 
@@ -31,7 +33,18 @@ function getMessages(conversationId) {
         ORDER BY id ASC
     `);
 
-    return statement.all(conversationId);
+    const messages =
+        statement.all(conversationId);
+
+    return messages.map((message) => ({
+        ...message,
+
+        attachments:
+            attachmentsRepository
+                .getAttachmentsByMessageId(
+                    message.id
+                )
+    }));
 }
 
 

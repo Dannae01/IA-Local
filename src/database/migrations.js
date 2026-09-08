@@ -122,6 +122,44 @@ function initializeDatabase() {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS message_attachments (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            message_id INTEGER NOT NULL,
+
+            conversation_id INTEGER NOT NULL,
+
+            type TEXT NOT NULL,
+
+            name TEXT NOT NULL,
+
+            path TEXT NOT NULL,
+
+            mime_type TEXT,
+
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (message_id)
+                REFERENCES messages(id)
+                ON DELETE CASCADE,
+
+            FOREIGN KEY (conversation_id)
+                REFERENCES conversations(id)
+                ON DELETE CASCADE
+
+        );
+
+
+        CREATE INDEX IF NOT EXISTS
+        idx_message_attachments_message
+        ON message_attachments(message_id);
+
+
+        CREATE INDEX IF NOT EXISTS
+        idx_message_attachments_conversation
+        ON message_attachments(conversation_id);
+
         CREATE INDEX IF NOT EXISTS idx_memories_type
         ON memories(type);
 

@@ -127,8 +127,123 @@ function enhanceTables(element) {
     });
 }
 
+function renderImage(
+    element,
+    image
+) {
+    if (
+        !image ||
+        typeof image.dataUrl !== 'string'
+    ) {
+        return;
+    }
 
+    if (image.missing) {
+        const missing =
+            document.createElement('div');
+
+        missing.className =
+            'nova-image-missing';
+
+        missing.textContent =
+            `Imagen no disponible: ${image.name || 'archivo desconocido'}`;
+
+        element.appendChild(
+            missing
+        );
+
+        return;
+    }
+
+    const container =
+        document.createElement('div');
+
+    container.className =
+        'nova-image-container';
+
+    const img =
+        document.createElement('img');
+
+    img.className =
+        'nova-chat-image';
+
+    img.src =
+        image.dataUrl;
+
+    img.alt =
+        image.name || 'Imagen';
+
+    img.loading =
+        'lazy';
+
+    container.appendChild(img);
+
+    if (image.id) {
+        const deleteButton =
+            document.createElement(
+                'button'
+            );
+
+        deleteButton.className =
+            'nova-image-delete';
+
+        deleteButton.textContent =
+            '×';
+
+        deleteButton.title =
+            'Eliminar imagen';
+
+        deleteButton.addEventListener(
+            'click',
+            async () => {
+
+                const confirmed =
+                    confirm(
+                        `¿Eliminar "${image.name || 'esta imagen'}" de NOVA?`
+                    );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
+                    const result =
+                        await window.nova
+                            .deleteAttachment(
+                                image.id
+                            );
+
+                    if (!result.success) {
+                        throw new Error(
+                            result.error ||
+                            'No se pudo eliminar la imagen.'
+                        );
+                    }
+
+                    container.remove();
+
+                } catch (error) {
+                    console.error(
+                        'ERROR AL ELIMINAR IMAGEN:',
+                        error
+                    );
+
+                    alert(
+                        error.message
+                    );
+                }
+            }
+        );
+
+        container.appendChild(
+            deleteButton
+        );
+    }
+
+    element.appendChild(container);
+}
 
 window.novaResponseRenderer = {
-    renderAssistantMessage
+    renderAssistantMessage,
+    renderImage
 };

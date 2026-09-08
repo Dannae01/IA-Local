@@ -114,8 +114,17 @@ contextBridge.exposeInMainWorld('nova', {
         );
     },
 
-    sendMessage: (message) => {
-        return ipcRenderer.invoke('nova-message', message);
+    sendMessage: (
+        message,
+        attachments = []
+    ) => {
+        return ipcRenderer.invoke(
+            'nova-message',
+            {
+                message,
+                attachments
+            }
+        );
     },
 
     getModels: () => {
@@ -164,6 +173,39 @@ contextBridge.exposeInMainWorld('nova', {
     importDocument: () => {
         return ipcRenderer.invoke(
             'nova-import-document'
+        );
+    },
+
+    importAttachment: () => {
+        return ipcRenderer.invoke(
+            'nova-import-attachment'
+        );
+    },
+
+    deleteAttachment: (
+        attachmentId
+    ) => {
+        return ipcRenderer.invoke(
+            'nova-delete-attachment',
+            attachmentId
+        );
+    },
+
+    stageClipboardImage: (
+        image
+    ) => {
+        return ipcRenderer.invoke(
+            'nova-stage-clipboard-image',
+            image
+        );
+    },
+
+    discardPendingAttachment: (
+        token
+    ) => {
+        return ipcRenderer.invoke(
+            'nova-discard-pending-attachment',
+            token
         );
     },
 

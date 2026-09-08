@@ -64,6 +64,11 @@ const renameConfirmButton =
         "rename-confirm-button"
     );
 
+const pendingAttachmentsContainer =
+    document.getElementById(
+        'pending-attachments'
+    );
+
 let selectedConversationForAction = null;
 
 let currentConversationId = null;
@@ -74,6 +79,7 @@ let isChangingConversation = false;
 
 let documentLoadVersion = 0;
 let conversationListVersion = 0;
+let pendingAttachments = [];
 
 async function prepareCurrentConversation(title) {
     const result = await window.nova.ensureConversation(title);
@@ -208,6 +214,80 @@ async function loadConversationDocuments() {
     }
 }
 
+function renderPendingAttachments() {
+    pendingAttachmentsContainer.innerHTML = '';
+
+    pendingAttachments.forEach(
+        (attachment, index) => {
+
+            if (
+                attachment.type !== 'image'
+            ) {
+                return;
+            }
+
+            const item =
+                document.createElement('div');
+
+            item.className =
+                'pending-attachment';
+
+            const img =
+                document.createElement('img');
+
+            img.src =
+                attachment.dataUrl;
+
+            img.alt =
+                attachment.name ||
+                'Imagen adjunta';
+
+            const removeButton =
+                document.createElement('button');
+
+            removeButton.className =
+                'pending-attachment-remove';
+
+            removeButton.textContent =
+                '×';
+
+            removeButton.title =
+                'Quitar imagen';
+
+            removeButton.addEventListener(
+                'click',
+                async () => {
+
+                    const attachment =
+                        pendingAttachments[
+                            index
+                        ];
+
+                    if (attachment?.token) {
+                        await window.nova
+                            .discardPendingAttachment(
+                                attachment.token
+                            );
+                    }
+
+                    pendingAttachments.splice(
+                        index,
+                        1
+                    );
+
+                    renderPendingAttachments();
+                }
+            );
+
+            item.appendChild(img);
+            item.appendChild(removeButton);
+
+            pendingAttachmentsContainer
+                .appendChild(item);
+        }
+    );
+}
+
 /* Abrir NOVA */
 
 bubble.addEventListener("click", () => {
@@ -242,15 +322,40 @@ closeButton.addEventListener("click", () => {
 let isGenerating = false;
 
 async function sendMessage() {
-    if (isGenerating || isImporting || isChangingConversation) {
+    if (
+        isGenerating ||
+        isImporting ||
+        isChangingConversation
+    ) {
         return;
     }
 
-    const text = input.value.trim();
+    const text =
+        input.value.trim();
 
-    if (text === '') {
+    if (
+        text === '' &&
+        pendingAttachments.length === 0
+    ) {
         return;
     }
+
+    const attachmentsToSend =
+        pendingAttachments.map(
+            (attachment) => ({
+                type:
+                    attachment.type,
+                token:
+                    attachment.token
+            })
+        );
+
+    const attachmentsForMessage =
+        pendingAttachments.map(
+            (attachment) => ({
+                ...attachment
+            })
+        );
 
     isGenerating = true;
 
@@ -259,91 +364,204 @@ async function sendMessage() {
     let renderTimer = null;
 
     try {
-        const userMessage = document.createElement('div');
-        userMessage.classList.add('message', 'user-message');
-        userMessage.textContent = text;
-        messages.appendChild(userMessage);
+
+        const userMessage =
+            document.createElement(
+                'div'
+            );
+
+        userMessage.classList.add(
+            'message',
+            'user-message'
+        );
+
+        if (text) {
+            const textElement =
+                document.createElement(
+                    'div'
+                );
+
+            textElement.textContent =
+                text;
+
+            userMessage.appendChild(
+                textElement
+            );
+        }
+
+        for (
+            const attachment
+            of attachmentsForMessage
+        ) {
+            if (
+                attachment.type ===
+                'image'
+            ) {
+                window
+                    .novaResponseRenderer
+                    .renderImage(
+                        userMessage,
+                        attachment
+                    );
+            }
+        }
+
+        messages.appendChild(
+            userMessage
+        );
 
         input.value = '';
 
-        const novaMessage = document.createElement('div');
-        novaMessage.classList.add('message', 'nova-message');
-        messages.appendChild(novaMessage);
+        pendingAttachments = [];
+
+        renderPendingAttachments();
+
+        const novaMessage =
+            document.createElement(
+                'div'
+            );
+
+        novaMessage.classList.add(
+            'message',
+            'nova-message'
+        );
+
+        messages.appendChild(
+            novaMessage
+        );
 
         sendButton.textContent = '…';
-        sendButton.classList.add('stop-button');
+
+        sendButton.classList.add(
+            'stop-button'
+        );
+
         sendButton.disabled = true;
 
-        messages.scrollTop = messages.scrollHeight;
 
-        let streamedContent = '';
-        let renderTimer = null;
+        messages.scrollTop =
+            messages.scrollHeight;
 
-        window.nova.onStream((data) => {
-            if (!acceptingChunks) {
-                return;
-            }
+        window.nova.onStream(
+            (data) => {
 
-            streamedContent += data.chunk;
+                if (!acceptingChunks) {
+                    return;
+                }
 
-            if (renderTimer) {
-                return;
-            }
+                streamedContent +=
+                    data.chunk;
 
-            renderTimer = setTimeout(() => {
-                renderTimer = null;
+                if (renderTimer) {
+                    return;
+                }
 
-                window.novaResponseRenderer
-                    .renderAssistantMessage(
-                        novaMessage,
-                        streamedContent
+                renderTimer =
+                    setTimeout(
+                        () => {
+
+                            renderTimer =
+                                null;
+
+                            window
+                                .novaResponseRenderer
+                                .renderAssistantMessage(
+                                    novaMessage,
+                                    streamedContent
+                                );
+
+                            messages.scrollTop =
+                                messages.scrollHeight;
+
+                        },
+                        80
                     );
-
-                messages.scrollTop =
-                    messages.scrollHeight;
-            }, 80);
-        });
-
-        try {
-            await prepareCurrentConversation(text);
-            await loadConversationDocuments();
-
-            sendButton.textContent = '■';
-            sendButton.disabled = false;
-
-            const result = await window.nova.sendMessage(text);
-
-            if (result.success || result.stopped) {
-                window.novaResponseRenderer
-                    .renderAssistantMessage(
-                        novaMessage,
-                        result.response
-                    );
-            } else {
-                novaMessage.textContent =
-                    result.error || 'No se pudo procesar el mensaje.';
             }
-        } catch (error) {
+        );
+
+        await prepareCurrentConversation(
+            text ||
+            'Imagen adjunta'
+        );
+
+        await loadConversationDocuments();
+
+        sendButton.textContent = '■';
+
+        sendButton.disabled = false;
+
+        const result =
+            await window.nova
+                .sendMessage(
+                    text,
+                    attachmentsToSend
+                );
+
+        if (
+            result.success ||
+            result.stopped
+        ) {
+            window
+                .novaResponseRenderer
+                .renderAssistantMessage(
+                    novaMessage,
+                    result.response
+                );
+
+        } else {
+
             novaMessage.textContent =
-                'Ocurrió un error al procesar el mensaje.';
-
-            console.error(error);
+                result.error ||
+                'No se pudo procesar el mensaje.';
         }
+
+    } catch (error) {
+
+        console.error(
+            'ERROR AL ENVIAR MENSAJE:',
+            error
+        );
+
+        const novaMessages =
+            messages.querySelectorAll(
+                '.nova-message'
+            );
+
+        const lastNovaMessage =
+            novaMessages[
+                novaMessages.length - 1
+            ];
+
+        if (lastNovaMessage) {
+            lastNovaMessage.textContent =
+                'Ocurrió un error al procesar el mensaje.';
+        }
+
     } finally {
 
         if (renderTimer) {
-            clearTimeout(renderTimer);
+            clearTimeout(
+                renderTimer
+            );
+
             renderTimer = null;
         }
 
         acceptingChunks = false;
+
         isGenerating = false;
 
         sendButton.textContent = '↑';
-        sendButton.classList.remove('stop-button');
+
+        sendButton.classList.remove(
+            'stop-button'
+        );
+
         sendButton.disabled = false;
 
-        messages.scrollTop = messages.scrollHeight;
+        messages.scrollTop =
+            messages.scrollHeight;
+
         input.focus();
     }
 }
@@ -371,6 +589,182 @@ input.addEventListener('keydown', (event) => {
     }
 });
 
+input.addEventListener(
+    'paste',
+    async (event) => {
+
+        if (
+            isGenerating ||
+            isImporting ||
+            isChangingConversation
+        ) {
+            return;
+        }
+
+
+        const clipboardItems =
+            event.clipboardData
+                ?.items;
+
+
+        if (!clipboardItems) {
+            return;
+        }
+
+
+        let imageItem =
+            null;
+
+        for (
+            const item
+            of clipboardItems
+        ) {
+            if (
+                item.kind === 'file' &&
+                item.type.startsWith(
+                    'image/'
+                )
+            ) {
+                imageItem =
+                    item;
+
+                break;
+            }
+        }
+
+
+        if (!imageItem) {
+            return;
+        }
+
+        event.preventDefault();
+
+
+        const file =
+            imageItem.getAsFile();
+
+
+        if (!file) {
+            return;
+        }
+
+
+        try {
+
+            const dataUrl =
+                await new Promise(
+                    (
+                        resolve,
+                        reject
+                    ) => {
+
+                        const reader =
+                            new FileReader();
+
+
+                        reader.onload =
+                            () => {
+                                resolve(
+                                    reader.result
+                                );
+                            };
+
+
+                        reader.onerror =
+                            () => {
+                                reject(
+                                    new Error(
+                                        'No se pudo leer la imagen del portapapeles.'
+                                    )
+                                );
+                            };
+
+
+                        reader.readAsDataURL(
+                            file
+                        );
+                    }
+                );
+
+            for (
+                const attachment
+                of pendingAttachments
+            ) {
+                if (
+                    attachment.token
+                ) {
+                    await window.nova
+                        .discardPendingAttachment(
+                            attachment.token
+                        );
+                }
+            }
+
+
+            const result =
+                await window.nova
+                    .stageClipboardImage(
+                        {
+                            name:
+                                `clipboard-${Date.now()}.png`,
+
+                            mimeType:
+                                file.type ||
+                                'image/png',
+
+                            dataUrl
+                        }
+                    );
+
+
+            if (!result?.success) {
+                throw new Error(
+                    result?.error ||
+                    'No se pudo pegar la imagen.'
+                );
+            }
+
+
+            pendingAttachments = [
+                {
+                    type:
+                        'image',
+
+                    token:
+                        result.image.token,
+
+                    name:
+                        result.image.name,
+
+                    mimeType:
+                        result.image.mimeType,
+
+                    dataUrl:
+                        result.image.dataUrl
+                }
+            ];
+
+
+            renderPendingAttachments();
+
+            input.focus();
+
+
+        } catch (error) {
+
+            console.error(
+                'ERROR AL PEGAR IMAGEN:',
+                error
+            );
+
+
+            alert(
+                error.message
+            );
+        }
+    }
+);
+
 /* Nueva conversación */
 async function createNewConversation() {
     if (isGenerating || isImporting || isChangingConversation) {
@@ -391,6 +785,8 @@ async function createNewConversation() {
         currentConversationId = result.conversationId;
         messages.innerHTML = '';
         input.value = '';
+        pendingAttachments = [];
+        renderPendingAttachments();
 
         const notice = document.createElement('div');
         notice.classList.add('message', 'nova-message');
@@ -427,66 +823,188 @@ conversationNewButton.addEventListener(
 
 /* Panel de conversaciones */
 
-async function openConversation(conversationId) {
-    if (isGenerating || isImporting || isChangingConversation) {
+async function openConversation(
+    conversationId
+) {
+    if (
+        isGenerating ||
+        isImporting ||
+        isChangingConversation
+    ) {
         return;
     }
 
     isChangingConversation = true;
 
     try {
-        const history = await window.nova.getMessages(conversationId);
 
-        if (!Array.isArray(history)) {
-            throw new Error('No se pudo cargar el historial.');
+        const history =
+            await window.nova
+                .getMessages(
+                    conversationId
+                );
+
+        if (
+            !Array.isArray(
+                history
+            )
+        ) {
+            throw new Error(
+                'No se pudo cargar el historial.'
+            );
         }
 
-        const result = await window.nova.selectConversation(
-            conversationId
-        );
+
+        const result =
+            await window.nova
+                .selectConversation(
+                    conversationId
+                );
 
         if (!result?.success) {
             throw new Error(
-                result?.error || 'No se pudo seleccionar la conversación.'
+                result?.error ||
+                'No se pudo seleccionar la conversación.'
             );
         }
 
-        currentConversationId = conversationId;
+
+        currentConversationId =
+            conversationId;
+
         messages.innerHTML = '';
+
         input.value = '';
 
-        for (const message of history) {
-            const element = document.createElement('div');
+        pendingAttachments = [];
+
+        renderPendingAttachments();
+
+
+        /*
+         * =========================
+         * HISTORIAL
+         * =========================
+         */
+
+        for (
+            const message
+            of history
+        ) {
+
+            const element =
+                document.createElement(
+                    'div'
+                );
 
             element.classList.add(
                 'message',
-                message.role === 'user' ? 'user-message' : 'nova-message'
+                message.role === 'user'
+                    ? 'user-message'
+                    : 'nova-message'
             );
 
-            if (message.role === 'user') {
-                element.textContent =
-                    message.content;
+
+            /*
+             * TEXTO
+             */
+            if (
+                message.role ===
+                'user'
+            ) {
+
+                if (message.content) {
+
+                    const textElement =
+                        document.createElement(
+                            'div'
+                        );
+
+                    textElement.textContent =
+                        message.content;
+
+                    element.appendChild(
+                        textElement
+                    );
+                }
+
             } else {
-                window.novaResponseRenderer
+
+                window
+                    .novaResponseRenderer
                     .renderAssistantMessage(
                         element,
                         message.content
                     );
             }
 
-            messages.appendChild(element);
+
+            /*
+             * ADJUNTOS
+             */
+            if (
+                Array.isArray(
+                    message.attachments
+                )
+            ) {
+
+                for (
+                    const attachment
+                    of message.attachments
+                ) {
+
+                    if (
+                        attachment.type ===
+                        'image'
+                    ) {
+
+                        window
+                            .novaResponseRenderer
+                            .renderImage(
+                                element,
+                                attachment
+                            );
+                    }
+                }
+            }
+
+
+            messages.appendChild(
+                element
+            );
         }
+
 
         await loadConversationDocuments();
 
-        conversationPanel.classList.remove('conversation-panel-open');
-        messages.scrollTop = messages.scrollHeight;
+
+        conversationPanel
+            .classList
+            .remove(
+                'conversation-panel-open'
+            );
+
+
+        messages.scrollTop =
+            messages.scrollHeight;
+
         input.focus();
+
     } catch (error) {
-        console.error('ERROR AL CARGAR CONVERSACIÓN:', error);
-        alert(error.message);
+
+        console.error(
+            'ERROR AL CARGAR CONVERSACIÓN:',
+            error
+        );
+
+        alert(
+            error.message
+        );
+
     } finally {
-        isChangingConversation = false;
+
+        isChangingConversation =
+            false;
     }
 }
 
@@ -766,6 +1284,9 @@ deleteConfirmButton.addEventListener('click', async () => {
             currentConversationId = null;
             messages.innerHTML = '';
             input.value = '';
+
+            pendingAttachments = [];
+            renderPendingAttachments();
 
             await loadConversationDocuments();
 
@@ -1055,41 +1576,95 @@ loadModels().then(() => {
 // IMPORTAR DOCUMENTOS
 // =============================
 
-importDocumentButton.addEventListener('click', async () => {
-    if (isGenerating || isImporting || isChangingConversation) {
-        return;
-    }
+importDocumentButton.addEventListener(
+    'click',
+    async () => {
 
-    isImporting = true;
-    importDocumentButton.disabled = true;
-    sendButton.disabled = true;
-
-    try {
-        const result = await window.nova.importDocument();
-
-        if (result.canceled) {
+        if (
+            isGenerating ||
+            isImporting ||
+            isChangingConversation
+        ) {
             return;
         }
 
-        if (!result.success) {
-            throw new Error(
-                result.error || 'No se pudo importar el documento.'
+        isImporting = true;
+
+        importDocumentButton.disabled =
+            true;
+
+        sendButton.disabled =
+            true;
+
+        try {
+            const result =
+                await window.nova
+                    .importAttachment();
+
+            if (result.canceled) {
+                return;
+            }
+
+            if (!result.success) {
+                throw new Error(
+                    result.error ||
+                    'No se pudo adjuntar el archivo.'
+                );
+            }
+
+            if (
+                result.type ===
+                'document'
+            ) {
+                currentConversationId =
+                    result.conversationId;
+
+                await loadConversationDocuments();
+                await loadConversations();
+
+                return;
+            }
+
+            if (
+                result.type === 'image'
+            ) {
+                pendingAttachments = [
+                    {
+                        type: 'image',
+                        token: result.image.token,
+                        id: result.image.id,
+                        name: result.image.name,
+                        mimeType: result.image.mimeType,
+                        dataUrl: result.image.dataUrl
+                    }
+                ];
+
+                renderPendingAttachments();
+
+                input.focus();
+
+                return;
+            }
+
+        } catch (error) {
+            console.error(
+                'ERROR AL ADJUNTAR ARCHIVO:',
+                error
             );
+
+            alert(error.message);
+
+        } finally {
+            isImporting = false;
+
+            importDocumentButton.disabled =
+                false;
+
+            sendButton.disabled =
+                false;
         }
-
-        currentConversationId = result.conversationId;
-
-        await loadConversationDocuments();
-        await loadConversations();
-    } catch (error) {
-        console.error('ERROR AL IMPORTAR DOCUMENTO:', error);
-        alert(error.message);
-    } finally {
-        isImporting = false;
-        importDocumentButton.disabled = false;
-        sendButton.disabled = false;
     }
-});
+);
 
 
 // Progreso de importación
